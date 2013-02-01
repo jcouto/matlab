@@ -21,7 +21,7 @@ function out=plotRastergram(varargin)
     cc=p.Results.color;
     linesize=p.Results.linewidth;
     
-    out=[];
+    out=gca;
     
     if ~iscell(spikes)
         disp('---> Spike Times must be a cell array...')
