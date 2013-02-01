@@ -72,7 +72,7 @@ parfor jj = 1:N
     end
 end
 if length(idx)
-    trials{idx} = {};
+    trials(idx) = [];
     t0(idx) = [];
     trialSpkShapes(idx,:) = [];
     baselineCurrent(idx) = [];
