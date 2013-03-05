@@ -8,8 +8,8 @@ function indexes = findTransitions(data,thresh)
 % Joao Couto, June 2012
 
     diffdata=diff(data);
-     if nargin<2 | isempty(thresh)
+     if nargin<2 || isempty(thresh)
         thresh=(max(diffdata)-min(diffdata))/2+min(diffdata);
-    end
+     end
     indexes=find(abs(diffdata)>thresh)+1;
 

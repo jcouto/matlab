@@ -15,7 +15,7 @@ function [phi, dphi, expected_isi, pidx]=extractPRC(spiketimes,option)
 %     * mean_isi is the <isi> considered to calculate dphi
 % Notes:
 %     * the values are not normalized to the mean isi.
-%
+% Joao Couto - February 2013
 
 % Index of perturbed isi. 
 idx = cellfun(@(x) find(x>0,1)-1,spiketimes,'UniformOutput',0);
@@ -60,13 +60,14 @@ function p = i_calculate_phi(spks, idx)
 M = length(spks)-1;
 p = nan(M,1);
 isi = diff(spks);
-for ii = -(idx-1):idx-1
+for ii = -(idx-1):M-idx
     % To be sure lets do one order at a time.
     if ii == 0
         p(ii+idx) = abs(spks(idx));
     elseif ii < 0
         p(ii+idx) = sum(isi(ii+idx:idx-1))+abs(spks(idx)); 
     elseif ii > 0
+        
         p(ii+idx) = abs(spks(idx))-sum(isi(idx+1:idx+ii));
     end
 end

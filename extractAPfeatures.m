@@ -25,6 +25,7 @@ RMSFACTOR    = 0.5;
 SMOOTH3dV    = 5; % if >1 the 3rd derivative is smoothed with a moving 
 % average of SMOOTH3dV size
 ti           = 0 : 1e3/INTERP_RATE : t(end);          % ms
+disp(t(end))
 dti          = ti(2)-ti(1);
 
 % export variables
@@ -39,14 +40,16 @@ ahdp    = nan(N,1);
 parfor ii = 1:N
     % cubic spline interpolation
     %disp(['Running ',num2str(ii)])
+    
     Xi              = interp1(t,X(ii,:),ti,METHOD);
     [Vmax , iMax]       = max(Xi);                              % !!! mV
     d3Xi            = smooth(diff(Xi,3),SMOOTH3dV,'moving')/((dti*1e3)^3);
     %[~, i3dV]       = max(abs(d3Xi);
-    [~,i3dV]        = findpeaks(abs(d3Xi),'minpeakheight',rms(d3Xi)*RMSFACTOR);
+    [~,i3dV]        = findpeaks((d3Xi),'minpeakheight',rms(d3Xi)*RMSFACTOR,'minpeakdistance',3);
     
     i3dV = i3dV(find(ti(i3dV)>ti(iMax)-2,1,'first')); %find the first 2ms before the spike
-    iThr            = i3dV + 3; % correct for idx of the 3rd derivative
+%     iThr            = i3dV + 3; % correct for idx of the 3rd derivative
+    iThr            = i3dV;
     Vthr(ii)            = Xi(iThr);                             % !!! mV
     
     slope(ii)           = (Vmax - Vthr(ii))/(ti(iMax)-ti(iThr));    % !!! mV/ms

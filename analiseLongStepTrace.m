@@ -44,8 +44,15 @@ else
     end
 end
 
-% Find transitions
-protTransitions = findTransitions(STIM);
+% Find transitions if the signal is noisy, need to use a different
+% threshold measure (USE_THRESH)
+% USE_THRESH = 1;
+% if exist('USE_THRESH','var') 
+%     ithresh = max(STIM) - (max(STIM)-min(STIM))./2
+%     protTransitions = findTransitions(STIM,ithresh);
+% else
+    protTransitions = findTransitions(STIM);
+% end
 tTransitions    = [0 , T(protTransitions)];
 
 idx = find(diff(tTransitions) > 0.05);

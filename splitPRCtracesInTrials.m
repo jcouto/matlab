@@ -1,11 +1,33 @@
-function [trials,t0,trialSpkShapes,baselineCurrent,pertAmp,pertArea] = splitPRCtracesInTrials(T, Vdata,Idata,Pdata,Vthreshold,Pthreshold,nSpkBefore,nSpkAfter)
+function [trials,t0,trialSpkShapes,baselineCurrent,pertAmp,pertArea] = ...
+    splitPRCtracesInTrials(T, Vdata,Idata,Pdata,Vthreshold,Pthreshold,...
+    nSpkBefore,nSpkAfter)
 % This function separates a trace into different trials. It assumes that a
 % traditional/direct Phase Response Curve protocol was used.
 %
 %[trials,t0,spk_shapes,baselineCurrent,pertAmp,pertArea] = splitPRCtracesInTrials(T, Vdata,Idata,Pdata,Vthreshold,Pthreshold)
-%     * T can be either the time vector or the dt.
 %
-
+% Inputs:
+%    * T - can be either the time vector or the dt.
+%    * Vdata -  the voltage trace
+%    * Idata - the current trace (used to compute the baseline current)
+%    * Pdata - the perturbation data (used to find the time of perturbation
+%    and calculate the area/amplitude).
+%    * Vthreshold - threshold for spike detection.
+%    * Pthreshold - threshold for perturbation detection.
+%    * nSpkBefore - Number of spikes to consider before the perturbation.
+%    * nSpkAfter - Number of spikes after.
+%
+% Outputs:
+%    * trials - spiketimes cell array centered on the perturbation.
+%    * t0 - time of the perturbation on the original trace.
+%    * trialSpkShapes - waveform of spikeshapes (mean of the spikes in each
+%    trial).
+%    * baselineCurrent - vector of the mean current injected just before
+%    the perturbation.
+%    * pertAmp - Amplitude of the perturbation (in units of Idata).
+%    * pertArea - Area of the perturbation.
+%
+% Joao Couto - January 2013
 
 if ~exist('Vthreshold','var'), Vthreshold = -10; end
 if ~exist('Pthreshold','var'), Pthreshold = 10; end
@@ -59,7 +81,7 @@ parfor jj = 1:N
         t0(jj) = Tperturbations(jj);
         % Current injected (e.g. PID)
         injectedCurrent(jj) = nanmean(extractTriggeredTraces(Idata,Iperturbations(jj),...
-            TPRE./1000./dt , TPOST./1000./dt));
+            TPRE./1000./dt , -1));
         
         pert_traces = extractTriggeredTraces(Pdata,Iperturbations(jj),...
             TPRE./1000./dt , TPOST./1000./dt);

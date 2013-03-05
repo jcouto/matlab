@@ -1,6 +1,8 @@
 function [X,Y,h] = kernelRegression(x, y, edges, h)
-% KSR   Kernel smoothing regression
+% 
+% [X,Y,h] = kernelRegression(x, y, edges, h)
 %
+% KSR   Kernel smoothing regression
 % r=ksr(x,y) returns the Gaussian kernel regression in structure r such that
 %   r.f(r.x) = y(x) + e
 %
@@ -24,6 +26,7 @@ x=x(:);
 y=y(:);
 
 % clean missing or invalid data points (nan are removed).
+
 inv=(x~=x)|(y~=y);
 x(inv)=[];
 y(inv)=[];
