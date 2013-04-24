@@ -8,7 +8,7 @@ function [spk,spk_w,t_spk_w] = extractSpikes(data, threshold, t, tpre, tpost, td
 %
 % * DATA               - mV                            []
 % * THRESHOLD          - mV                            [-10 mV]
-% * TIME VECTOR|SRATE  - s | s-1                       [15e3 s-1]
+% * TIME VECTOR|SRATE  - s | s                       [1./15e3 s]
 % * TPRE               - ms (time window before spk)   [5ms]
 % * TPOST              - ms (time window before spk)   [5ms]
 % * TDEAD              - ms (min time between spk)     [2ms]
@@ -28,7 +28,7 @@ else
     if length(t)>1
         dt = t(2)-t(1);
     else
-        dt = 1./t;
+        dt = t;
         t  = (0:size(data,1)).*dt;
     end
 end
