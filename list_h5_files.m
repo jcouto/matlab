@@ -16,6 +16,8 @@ function [files,kfiles] = list_h5_files(folder, level, sorted)
 % Joao Couto, May 2013
 
 except_folder = {'trash'};
+files = {};
+kfiles = {};
 
 if ~exist('folder','var');folder = '.';end
 if ~exist('level','var');level = 'all';end
@@ -46,8 +48,12 @@ if sorted
     kfilenames = kfilenames(idx);
     kbasenames = kbasenames(idx);
 end
-files = cell2struct([filenames,basenames,dates], ...
-                    {'path','basename','date'},2);
-kfiles = cell2struct([kfilenames,kbasenames,kdates], ...
-                    {'path','basename','date'},2);
+if ~isempty(filenames)
+    files = cell2struct([filenames,basenames,dates], ...
+                        {'path','basename','date'},2);
+end
+if ~isempty(kfilenames)
+    kfiles = cell2struct([kfilenames,kbasenames,kdates], ...
+                        {'path','basename','date'},2);
+end
 end % function
