@@ -1,22 +1,25 @@
 function [varargout] = process_dIV_file(ii,tt,plotvar)
-
+% ii - file number (from sorted list)  - defaul:t last file.
+% tt - [tmin,tmax] interval used to compute the dIV - default: all noisy
+% trace.
+% plotvar - if defined produces a plot - default:yes
 
 [files,kfiles] = list_h5_files;
 
-if ~exist('plotvar','var');plotvar = [];end
+if ~exist('plotvar','var');plotvar = 1;end
 if ~exist('ii','var');ii = length(files);end
 
 
 [tall,Vall,Iall,metadata,info] = i_load_compensated_voltage(files(ii),kfiles);
 % remove preamble or spontaneous.
+tprot = unique(cumsum(metadata(:,1)));
 if ~exist('tt','var')
-    tt = unique(cumsum(metadata(:,1)));
-    tt = [tt(end) - tt(end-1), tt(end-1)];
-elseif isempty(tt)
-    tt = unique(cumsum(metadata(:,1)));
-    tt = [tt(end) - tt(end-1), tt(end-1)];
+    tt = [];
 end
-
+if isempty(tt)
+    tt = [tprot(end) - tprot(end-1), tprot(end-1)];
+end
+Vrest = mean(Vall(tall>0 & tall<=tprot(1)));
 %Use only a stretch
 t = tall(tall>tt(1)&tall<=tt(2));
 V = Vall(tall>tt(1)&tall<=tt(2));
@@ -35,31 +38,40 @@ if ~isempty(plotvar)
     ax(6) = axes('position',[.75,.72,.2,.22]); % dVdt(V)
     ax(8) = axes('position',[.75,.43,.2,.22]); % Vm distrib
     
-%     ax(4) = axes();
+    %     ax(4) = axes();
     axes(ax(1))
     
 end
-[C,~,~,p_C] = estimate_capacitance_from_noisy_trace(t,V,I,-65,plotvar)
+
+[C,~,~,p_C] = estimate_capacitance_from_noisy_trace(t,V,I,Vrest,plotvar);
 
 if ~isempty(plotvar),axes(ax(2));end
-[X, Y, Im, dI_V, dI_mu, dI_s, p_dIV] = extract_dIV(t, V, I, C, 50, plotvar);
-idx = (dI_V>-100 & dI_V<=-40 & ~isnan(dI_mu)& -dI_mu/C <= 25 );%
-[x] = fit_eLIF_to_dIV(dI_V(idx), dI_mu(idx),C)
 
-figure(2),clf
-plot(dI_V(idx), -dI_mu(idx)/C,'k')
-f = @(a,X)(1.0/a(1))*(a(2) - X + (a(3) * exp((X - a(4))/a(3))))
-hold on
-plot(dI_V(idx),f(x,dI_V(idx)),'r')
+[rawVpoints, rawYpoints, Im, dI_V, dI_mu, dI_s, p_dIV] = ...
+    extract_dIV(t, V, I, C, 50, plotvar);
+idx = (dI_V>-100 & dI_V<=-40 & ~isnan(dI_mu)& -dI_mu/C <= 25 );%
+[x, ~, f] = fit_eLIF_to_dIV(dI_V(idx), dI_mu(idx),C);
+
+
 if ~isempty(plotvar)
+    figure(2),clf
+    plot(dI_V(idx), -dI_mu(idx)/C,'k')
+    
+    hold on
+    plot(dI_V(idx),f(x,dI_V(idx)),'r')
     axes(ax(3));
     plot(t,V,'k')
     axis tight
     hold on
+    Vm = integrate_eLIF(x,t,I,C,V(1));
+    plot(t,Vm,'r')
+    %     % eLIF response to DC current
+    %     Vm2 = integrate_eLIF(x,t,150*ones(size(I)),C,V(1));
+    %     plot(t,Vm2,'g')
     axes(ax(4));
     plot(t,Im,'k')
     axis tight
-    %% 
+    %%
     axes(ax(8)),hold on
     edge = [min(V)-1:.5:max(V)+1];
     [n] = histc(V,edge);
@@ -89,10 +101,10 @@ if ~isempty(plotvar)
     set(ax(1),'xscale','log','yscale','log')
     set(ax(2),'xlim',[-80,-30],'ylim',[-3000,3000])
     set(ax(4),'xtick',[],'xcolor','w','ylim',[-3e3,3e3])
-    set(ax(3:4),'xlim',[t(1),t(1)+0.3])
+    set(ax(3:4),'xlim',[t(1),t(1)+1])
     linkaxes(ax(3:4),'x')
 end
-    
+
 function [t, V, I, metadata, info] = i_load_compensated_voltage(file,kfiles)
 % Internal function to load voltage trace
 V = [];
@@ -108,6 +120,7 @@ if isempty(ent(idx(1)).metadata) && ~isempty(kfiles)
     % Is there I?
     idx = find(strcmp('Waveform',{ent.name}));
     metadata = ent(idx).metadata;
+    % if there was a holding potential include it on the AEC current
     idx = [idx,find(strcmp('Constant',{ent.name}))];
     I = sum(vertcat(ent(idx).data),1);
     [~,k]  = min((file.date) - [kfiles.date]);

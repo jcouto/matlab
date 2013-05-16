@@ -4,6 +4,7 @@ function [X, Y, Im, dI_V, dI_mu, dI_s, p] = extract_dIV(t, V, I, C, window,plotv
 % Takes as inputs:
 %   t - time(s)
 %   V - Vm the compensated membrane voltage
+%   C - membrane capacitance estimate (use "estimate_capacitance_from_noisy_trace")
 %   I - injected current (pA)
 %   window - the window to remove after each spike (ms)
 %   plotvar - if defined a plot is generated.
@@ -14,7 +15,7 @@ function [X, Y, Im, dI_V, dI_mu, dI_s, p] = extract_dIV(t, V, I, C, window,plotv
 %   dI_V - binned samples of X
 %   dI_mu - binned samples of Y
 %   dI_s - std of the distribution in dI_mu
-%   p - the plot objects
+%   p - the plot objects (requires plotvar defined)
 
 if ~exist('C','var') 
     C = estimate_capacitance_from_noisy_trace(t,V,I);
@@ -32,12 +33,15 @@ dVdt = (diff(V)*1.0e-3)./dt;
 Im = (I - C*[dVdt(1),dVdt]);
 
 % calculate dI(V) from trace without spikes
+% Use threshold on dVdt
 [~,~,~, spkidx] = extract_spikes( dVdt, 20, t, 1, 3, 3);
+% Use threshold on spike peaks
+% [~,~,~, spkidx] = extract_spikes( V, [], t, 1, 3, 3);
 
 window = ceil(window*1.0e-3/dt); %convert window to points
 
 tmpV = [V,nan(1,window)];
-size(tmpV)
+
 for jj =  1:length(spkidx)
     idx = spkidx(jj);
     tmpV(idx:idx+window) = nan;
@@ -45,6 +49,7 @@ end
 
 tmpV = tmpV(1:end-window);
 
+% binning of the dI(V) curve
 edges = linspace(-90,-30,100);
 
 X = tmpV(~isnan(tmpV));

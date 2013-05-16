@@ -1,5 +1,5 @@
 function [edges, y_mu, y_s, nn ] = bin_samples(x, y, edges)
-% [nX, muY , sY, nSamples] = bin_samples(X, Y, EDGES)
+% [edges, muY , sY, nSamples] = bin_samples(X, Y, EDGES)
 % Returns new X and new Y points given the scattered X and Y points.
 % muY is obtain by simple averaging accross points.
 % sY is the standard deviation of each NX and 

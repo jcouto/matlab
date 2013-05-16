@@ -15,4 +15,4 @@ function [x, resnorm, f] = fit_eLIF_to_dIV(X, Y, C)
 %%
 f = @(a,X)(1.0/a(1))*(a(2) - X + (a(3) * exp((X - a(4))/a(3))));
 x0 = [20,-60,1,-40];
-[x,resnorm] = lsqcurvefit(f,x0,X,-Y/C)
+[x,resnorm] = lsqcurvefit(f,x0,X,-Y/C);
