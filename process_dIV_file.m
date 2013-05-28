@@ -1,8 +1,16 @@
-function [varargout] = process_dIV_file(ii,tt,plotvar)
+function [outvar] = process_dIV_file(ii,tt,plotvar)
 % ii - file number (from sorted list)  - defaul:t last file.
 % tt - [tmin,tmax] interval used to compute the dIV - default: all noisy
 % trace.
 % plotvar - if defined produces a plot - default:yes
+
+
+MAX_dIv_VALUE = 30;
+MAX_dI_VOLT = -40;
+MIN_dI_VOLT = -100;
+WINDOW = 100;
+SAVE_FILE = 'dIV';
+SAVE_FIG = 'dIV';
 
 [files,kfiles] = list_h5_files;
 
@@ -29,36 +37,60 @@ dVdt = (diff(V)*1e-3)./dt;
 
 if ~isempty(plotvar)
     fig = figure(1);clf;
-    ax(1) = axes('position',[.1,.1,.2,.25]);
-    ax(2) = axes('position',[.4,.1,.3,.25]);
-    ax(3) = axes('position',[.1,.43,.6,.25]);
-    ax(4) = axes('position',[.1,.72,.6,.25]);
-    ax(7) = axes('position',[.75,.1,.2,.25]); % isi distrib
-    ax(5) = axes('position',[.85,.2,.15,.15]); % spike shape
-    ax(6) = axes('position',[.75,.72,.2,.22]); % dVdt(V)
+    ax(1) = axes('position',[.1,.1,.15,.25]);
+    ax(2) = axes('position',[.35,.1,.25,.25]);
+    ax(3) = axes('position',[.1,.45,.55,.25]);
+    ax(4) = axes('position',[.1,.72,.55,.25]);
+    ax(7) = axes('position',[.83,.15,.15,.2]); % isi distrib
+    ax(5) = axes('position',[.85,.5,.15,.15]); % spike shape
+    ax(6) = axes('position',[.75,.72,.2,.2]); % dVdt(V)
     ax(8) = axes('position',[.75,.43,.2,.22]); % Vm distrib
-    
+    ax(9) = axes('position',[.6,.15,.2,.2]); % fit result
     %     ax(4) = axes();
     axes(ax(1))
     
 end
 
-[C,~,~,p_C] = estimate_capacitance_from_noisy_trace(t,V,I,Vrest,plotvar);
-
-if ~isempty(plotvar),axes(ax(2));end
-
-[rawVpoints, rawYpoints, Im, dI_V, dI_mu, dI_s, p_dIV] = ...
-    extract_dIV(t, V, I, C, 50, plotvar);
-idx = (dI_V>-100 & dI_V<=-40 & ~isnan(dI_mu)& -dI_mu/C <= 25 );%
-[x, ~, f] = fit_eLIF_to_dIV(dI_V(idx), dI_mu(idx),C);
+[C,capacitance.Ce,capacitance.var_I,p_C] = estimate_capacitance_from_noisy_trace(t,V,I,Vrest,plotvar);
 
 
 if ~isempty(plotvar)
-    figure(2),clf
-    plot(dI_V(idx), -dI_mu(idx)/C,'k')
-    
+    axes(ax(2));
+    xlabel('V (mV)');
+    ylabel('I_m (pA)');
+end
+
+[dIV.raw_points.x, dIV.raw_points.y, Im, dI_V, dI_mu, dI_s, p_dIV] = ...
+    extract_dIV(t, V, I, C, WINDOW, plotvar);
+
+
+idx = (dI_V>MIN_dI_VOLT & dI_V<=MAX_dI_VOLT & ~isnan(dI_mu)& -dI_mu/C <= MAX_dIv_VALUE );%
+[x, f, resnorm, r,fit_output] = fit_eLIF_to_dIV(dI_V(idx), dI_mu(idx),C);
+
+capacitance.C = C;
+capacitance.Vrest = Vrest;
+
+% Prepare output structure
+expName = regexp(pwd,'[0-9]{8}[A-Z][0-9]{2}','match');
+outvar.expName = expName{end};
+outvar.capacitance = capacitance;
+outvar.dIV.Id = dI_mu;
+outvar.dIV.Ids = dI_s;
+outvar.dIV.v = dI_V;
+outvar.dIV.fit_idx = idx;
+outvar.eLIFparam = x;
+outvar.eLIFfun = f;
+save(sprintf('dIV_%s.mat',expName{end}), '-struct', 'outvar');
+
+if ~isempty(plotvar)
+    axes(ax(9))
+    plot(dI_V(idx), -dI_mu(idx)/C,'k','linewidth',1)
     hold on
-    plot(dI_V(idx),f(x,dI_V(idx)),'r')
+    plot(dI_V(idx),f(x,dI_V(idx)),'r','linewidth',1)
+   
+    xlabel('V (mV)');
+    ylabel('F(V) (mV/ms)');
+
     axes(ax(3));
     plot(t,V,'k')
     axis tight
@@ -75,7 +107,9 @@ if ~isempty(plotvar)
     axes(ax(8)),hold on
     edge = [min(V)-1:.5:max(V)+1];
     [n] = histc(V,edge);
-    bar(edge,n,'facecolor','k','edgecolor','k')
+    
+    bar(edge,n./trapz(edge,n),'facecolor','k','edgecolor','k')
+    xlabel('V (mV)')
     %% Spike shapes
     axes(ax(5)),hold on
     [spk,spkw,tspkw, ~] = extract_spikes( V, [], t, 2, 5, 3);
@@ -84,25 +118,37 @@ if ~isempty(plotvar)
     mspkw = mean(spkw);
     plot(tspkw,mspkw,'r','linewidth',1.2)
     plot([tspkw(1),tspkw(end)],[0,0],'--','color',[.5,.5,.5])
-    xlim([tspkw(1),tspkw(end)])
+    plot([tspkw(1),tspkw(end)],[-65,-65],'--','color',[.5,.5,.5])
+    axis tight
+    
     axes(ax(6)),hold on
     plot(spkw(:,1:end-1)',dspkw','k','linewidth',0.5)
     mdspkw = diff(mspkw)./(info.dt*1e3);
     plot(mspkw(1:end-1),mdspkw,'r','linewidth',1.2)
     axis tight
+    xlabel('V (mV)')
+    ylabel('dVdt (mV/ms)')
     axes(ax(7)),hold on
-    [n] = histc(diff(spk*1e3),[1:5:300]);
-    bar([1:5:300],n,'facecolor','k','edgecolor','k')
-    
+    edge = [1:5:300];
+    [n] = histc(diff(spk*1e3),edge);
+    bar(edge,n./trapz(edge,n),'facecolor','k','edgecolor','k')
+    xlabel('isi (ms)')
     mean_isi = 1000/(length(spk)/(t(end)-t(1)));
     axis tight
     plot(mean_isi*[1,1],ylim(),'r')
-    set(ax,'box','off','tickdir','out','linewidth',1,'color','none')
+    set(ax,'box','off','tickdir','out','linewidth',1,'color','none','ticklength',[0.03,0.03])
     set(ax(1),'xscale','log','yscale','log')
     set(ax(2),'xlim',[-80,-30],'ylim',[-3000,3000])
     set(ax(4),'xtick',[],'xcolor','w','ylim',[-3e3,3e3])
-    set(ax(3:4),'xlim',[t(1),t(1)+1])
+    set(ax(3:4),'xlim',[t(1),t(1)+1],'ticklength',[0.015,0.015])
+    set(ax(5),'visible','off')
     linkaxes(ax(3:4),'x')
+    set(fig,'paperposition',[0,0,18,15],'papersize',[18,15],'paperunits','centimeters')
+    print(fig,'-dpdf',sprintf('dIV_%s.pdf',expName{end}))
+    caption = sprintf(['Experiment %s. Measured noise statistics (Mean and ',...
+        'standard deviation): pA'],expName{end})
+    
+    
 end
 
 function [t, V, I, metadata, info] = i_load_compensated_voltage(file,kfiles)

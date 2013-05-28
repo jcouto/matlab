@@ -1,5 +1,7 @@
 function [R,me,ml,ie,il] = compute_peak_to_baseline(x, y)
 % Computes the peak to baseline ration according to Phoka et al.2010
+% [R,me,ml,ie,il] = compute_peak_to_baseline(x, y)
+
 [me,ie] = find_max_local_extrema(y(x<0.5 & x>=0));
 if ~isempty(me)
     ie = ie + find(x>=0,1,'first');

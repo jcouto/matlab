@@ -24,8 +24,8 @@ if ~exist('level','var');level = 'all';end
 if ~exist('sorted','var');sorted = 1;end
 
 % Get the lists of the files
-filenames = list_files(folder,'*.h5','all',except_folder,{'*_kernel.dat'});
-kfilenames = list_files(folder,'*_kernel*','all',except_folder);
+filenames = list_files(folder,'*.h5',level,except_folder,{'*_kernel.dat'});
+kfilenames = list_files(folder,'*_kernel*',level,except_folder);
 % Get the basename and date from filename.
 basenames = cell(size(filenames));
 kbasenames = cell(size(kfilenames));

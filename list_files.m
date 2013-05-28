@@ -33,7 +33,7 @@ if ~exist('exception_level2','var'), exception_level2 = {}; end
 
 find_cmd = sprintf('find %s -name "%s"',folder,mask);
 if isnumeric(level)    
-    find_cmd = sprintf('%s -max_depth %d',find_cmd, level);
+    find_cmd = sprintf('%s -maxdepth %d',find_cmd, level);
 end
 files = run_system_command(find_cmd);
 files = regexp(files,'\n','split');
@@ -48,7 +48,7 @@ end
 for ii = 1:length(exception_level2) 
     find_cmd = sprintf('find %s -name "%s"',folder,exception_level2{ii});
     if isnumeric(level)    
-        find_cmd = sprintf('%s -max_depth %d',find_cmd, level);
+        find_cmd = sprintf('%s -maxdepth %d',find_cmd, level);
     end
     except_files = run_system_command(find_cmd);
     except_files = regexp(except_files,'\n','split');

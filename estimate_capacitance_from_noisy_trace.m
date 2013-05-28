@@ -1,4 +1,4 @@
-function [Cm,C,Variance_estimate,p] = estimate_capacitance_from_noisy_trace(t,V,I,Vrest,plotvar)
+function [Cm,Ce,Variance_estimate,p] = estimate_capacitance_from_noisy_trace(t,V,I,Vrest,plotvar)
 % Estimates the capacitance from an intracellular recording were a noisy
 % current was injected.
 % Accepts:
@@ -18,7 +18,7 @@ function [Cm,C,Variance_estimate,p] = estimate_capacitance_from_noisy_trace(t,V,
 %%% Parameters:
 CMIN = 10;      %pF
 CMAX = 1000;    %pF
-CSTEP = 10;      %pF
+CSTEP = 1;      %pF
 DELTAV = 1;     %mV
 p = [];
 %%%
@@ -33,7 +33,7 @@ dt = t(2)-t(1);
 dVdt = diff(V)./(dt*1.e3);
 
 Ce = CMIN:CSTEP:CMAX;
-Variance_estimate = nan(length(Ce),1);
+Variance_estimate = nan(size(Ce));
 
 idx = find(V(1:end-1)>=(Vrest-DELTAV) & V(1:end-1)<=(Vrest+DELTAV));
 
