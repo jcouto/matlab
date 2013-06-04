@@ -43,8 +43,8 @@ if ~exist('tpre','var'),tpre = 1;end
 if ~exist('tpost','var'),tpost = 1.5;end
 if ~exist('tdead','var'),tdead = 1.5;end
 
-detection_mode = 'pos';
-interpolation = 'y';
+detection_mode = 'both';
+interpolation = 'n';
 int_factor = 2;
 
 
@@ -58,7 +58,7 @@ spk_idx     = cell(N,1);
 threshold     = cell(N,1);
 
 ref = ceil(tdead./1000/dt);
-w_pre = ceil(tpre./1000/dt)
+w_pre = ceil(tpre./1000/dt);
 w_post = ceil(tpost./1000/dt);
 
 % LOCATE SPIKE TIMES
@@ -115,7 +115,7 @@ for ii = 1:N
     xf=data(ii,:);
     xf = [xf zeros(1,w_post)];
     for i=1:nspk                          %Eliminates artifacts
-        if max(abs( xf(index(i)-w_pre:index(i)+w_post) )) < thr * 50
+        if max(abs( xf(index(i)-w_pre:index(i)+w_post) )) < thr * 4
             spikes(i,:)=xf(index(i)-w_pre-1:index(i)+w_post+2);
         end
     end

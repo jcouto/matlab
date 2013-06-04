@@ -1,5 +1,5 @@
 function xf = filter_data(x,fmin,fmax,srate,type)
-
+% xf = filter_data(x,fmin,fmax,srate,type)
 if ~exist('fmin','var');fmin = 300;end
 if ~exist('fmax','var');fmax = 3000;end
 if ~exist('srate','var');srate = 20000;end
