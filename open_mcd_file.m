@@ -1,6 +1,14 @@
 function [hfile,outinfo] = open_mcd_file(filename)
 % Opens a multichannel systems file. Use load_trace_from_mcd_file(file,channel,startend)
 % to load a channel.
+if ~ischar(filename)
+   errormsg = sprintf('Argument "filename" needs to be a string.');
+   error(errormsg)
+end
+if ~exist(filename, 'file') == 2
+   errormsg = sprintf('File %s not found!',filename);
+   error(errormsg)
+end
 
 open_neuroshare()
 % Open file
@@ -43,6 +51,7 @@ DigitalList = AnalogList(find(strcmp(tmp,'digi')));
 outinfo.electrodes = cellfun(@(x)str2num(x(15:18)),{EntityInfo(ElectrodeList).EntityLabel},'uniformoutput',1);
 outinfo.digital = cellfun(@(x)str2num(x(15:18)),{EntityInfo(DigitalList).EntityLabel},'uniformoutput',1);
 [ns_result, outinfo.nsamples] = ns_GetIndexByTime(hfile, ElectrodeList(1), tend+100,0);
+
 outinfo.date = date;
 outinfo.filename = filename;
 outinfo.tend = tend;
@@ -65,7 +74,7 @@ function open_neuroshare()
             [pathname, name, ext]=fileparts(which('nsMCDLibrary.dylib'));
     end
     if (ns_SetLibrary([pathname filesep name ext]) ~= 0)
-        sprintf('''%s'' was not found on the MATLAB path',...
+        error('''%s'' was not found on the MATLAB path',...
             fullfile(pathname, name, ext));
         return
     end

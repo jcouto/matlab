@@ -7,5 +7,5 @@ function thr = find_spike_threshold(x,stdmin)
 %   Default stdmin is 4.
 %   In the WaveClus batch scripts stdmin is set to 5.
 % Adapted from WaveClus - Quiroga 2008
-if ~exist('stdmin','var');stdmin = 4;end
+if ~exist('stdmin','var');stdmin = 5;end
 thr = stdmin * median(abs(x))/0.6745;

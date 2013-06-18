@@ -1,4 +1,4 @@
-function [inspk] = compute_wavelets_from_spk_shape(spikes,wavelet_scales)
+function [inspk] = compute_wavelets_from_spk_shape(spikes,wavelet_scales,clustering_inputs)
 % COMPUTE_WAVELETS_FROM_SPK_SHAPE Computes the wavelet coefficients from
 % spike waveforms.
 % [inspk] = compute_wavelets_from_spk_shape(spikes,wavelet_scales)

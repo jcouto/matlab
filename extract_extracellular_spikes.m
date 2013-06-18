@@ -1,4 +1,4 @@
-function [spk,spk_w,t_spk_w,spk_idx,threshold] = extract_extracellular_spikes(data, threshold, time, tpre, tpost, tdead)
+function [spk,spk_w,t_spk_w,spk_idx,threshold] = extract_extracellular_spikes(data, threshold, time, tpre, tpost, tdead, detection_mode)
 % EXTRACT_EXTRACELLULAR_SPIKES Extracts the spikes from extracellular filtered data using the algorithm proposed by Rodrigo Quiroga.
 %
 % [spk,spkwave,tspkwave] = extract_extracellular_spikes( DATA, THRESHOLD, T, TPRE, TPOST, TDEAD)
@@ -42,8 +42,8 @@ end
 if ~exist('tpre','var'),tpre = 1;end
 if ~exist('tpost','var'),tpost = 1.5;end
 if ~exist('tdead','var'),tdead = 1.5;end
+if ~exist('detection_mode','var'),detection_mode = 'neg';;end
 
-detection_mode = 'both';
 interpolation = 'n';
 int_factor = 2;
 
