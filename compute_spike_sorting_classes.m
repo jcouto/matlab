@@ -25,6 +25,7 @@ if ~exist('cluster','var') || ~exist('cluster_tree','var')
 end
 if isempty(clu) || isempty(tree)
     [clu,tree,cluster_input] = run_superparamagnetic_clustering(inspk);
+    
 end
 
 [temp] = find_tree_temperature(tree,cluster_input,[],[],[],[]);

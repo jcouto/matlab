@@ -25,6 +25,8 @@ if ~exist('cluster_input','var')
     dim=cluster_input.inputs;
 end
 
+tree = nan(cluster_input.num_temp,16);
+clus = nan(cluster_input.num_temp,size(inspk,1)+2);
 dat=load(fname_in);
 n=length(dat);
 fid=fopen(sprintf('%s.run',fname),'wt');
@@ -67,10 +69,12 @@ end
 if status
     disp('SPC failed...')
 end
-clu=load([fname '.dg_01.lab']);
-tree=load([fname '.dg_01']);
-delete(sprintf('%s.run',fname));
-delete *.mag
-delete *.edges
-delete *.param
-delete(fname_in);
+if exist([fname '.dg_01.lab'],'file')
+    clu=load([fname '.dg_01.lab']);
+    tree=load([fname '.dg_01']);
+    delete(sprintf('%s.run',fname));
+    delete *.mag
+    delete *.edges
+    delete *.param
+    delete(fname_in);
+end
