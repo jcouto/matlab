@@ -23,7 +23,12 @@ function [spk,spk_w,t_spk_w,spk_idx] = extract_spikes(data, threshold, t, tpre, 
 % Note: SPK and SPK_W are cells if more than one row is provided to
 %   DATA.
 
+if iscolumn(data)
+    data = data';
+end
+
 if ~exist('threshold','var'),threshold = -10;end; tt = threshold;
+
 if ~exist('t','var')
     dt = 1./30e3;
     t  = (0:size(data,2)).*dt;
@@ -32,7 +37,7 @@ else
         dt = t(2)-t(1);
     else
         dt = t;
-        t  = (0:size(data,1)).*dt;
+        t  = (0:size(data,2)).*dt;
     end
 end
 if ~exist('tpre','var'),tpre = 5;end
@@ -40,9 +45,7 @@ if ~exist('tpost','var'),tpost = 5;end
 if ~exist('tdead','var'),tdead = 2;end
 if ~exist('method','var'),method = 'peak';end
 % kink_threshold = 30; %mV/ms
-if iscolumn(data)
-    data = data';
-end
+
 N=size(data,1);
 
 spk     = cell(N,1);

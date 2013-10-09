@@ -1,7 +1,7 @@
 function [spk,spk_w,t_spk_w,spk_idx,threshold] = extract_extracellular_spikes(data, threshold, time, tpre, tpost, tdead, detection_mode)
 % EXTRACT_EXTRACELLULAR_SPIKES Extracts the spikes from extracellular filtered data using the algorithm proposed by Rodrigo Quiroga.
 %
-% [spk,spkwave,tspkwave] = extract_extracellular_spikes( DATA, THRESHOLD, T, TPRE, TPOST, TDEAD)
+% [spk,spkwave,tspkwave,spk_idx,threshold] = extract_extracellular_spikes( DATA, THRESHOLD, T, TPRE, TPOST, TDEAD,detection_mode)
 % Channels should be in collums.
 %
 %  Units:
@@ -44,7 +44,7 @@ if ~exist('tpost','var'),tpost = 1.5;end
 if ~exist('tdead','var'),tdead = 1.5;end
 if ~exist('detection_mode','var'),detection_mode = 'neg';end
 
-interpolation = 'n';
+interpolation = 'y';
 int_factor = 2;
 
 
@@ -70,52 +70,33 @@ for ii = 1:N
     
     switch detection_mode
         case 'pos'
-            nspk = 0;
-            xaux = find(data(ii,w_pre+2:end-w_post-2) > thr) +w_pre+1;
-            xaux0 = 0;
-            for i=1:length(xaux)
-                if xaux(i) >= xaux0 + ref
-                    [maxi iaux]=max((data(ii,xaux(i):xaux(i)+floor(ref/2)-1)));
-                    nspk = nspk + 1;
-                    index(nspk) = iaux + xaux(i) -1;
-                    xaux0 = index(nspk);
-                end
-            end
+            dd = data;
         case 'neg'
-            nspk = 0;
-            xaux = find(data(ii,w_pre+2:end-w_post-2) < -thr) +w_pre+1;
-            xaux0 = 0;
-            for i=1:length(xaux)
-                if xaux(i) >= xaux0 + ref
-                    [maxi iaux]=min((data(ii,xaux(i):xaux(i)+floor(ref/2)-1)));
-                    nspk = nspk + 1;
-                    index(nspk) = iaux + xaux(i) -1;
-                    xaux0 = index(nspk);
-                end
-            end
+            dd = -data;
         case 'both'
-            nspk = 0;
+            dd = abs(data);
             
-            xaux = find(abs(data(ii,w_pre+2:end-w_post-2)) > thr) + w_pre + 1;
-            
-            xaux0 = 0;
-            for i=1:length(xaux)
-                if xaux(i) >= xaux0 + ref
-                    [maxi iaux]=max(abs(data(ii,xaux(i):xaux(i)+floor(ref/2)-1)));
-                    nspk = nspk + 1;
-                    index(nspk) = iaux + xaux(i) -1;
-                    xaux0 = index(nspk);
-                end
-            end
     end
+    nspk = 0;
     
+    xaux = find(dd(ii,w_pre+2:end-w_post-2) > thr) + w_pre + 1;
+    
+    xaux0 = 0;
+    for i=1:length(xaux)
+        if xaux(i) >= xaux0 + ref
+            [maxi iaux]=max(dd(ii,xaux(i):xaux(i) + floor(ref/2) - 1));
+            nspk = nspk + 1;
+            index(nspk) = iaux + xaux(i) -1;
+            xaux0 = index(nspk);
+        end
+    end
     % SPIKE STORING (with or without interpolation)
     ls=w_pre+w_post;
     spikes=zeros(nspk,ls+4);
     xf=data(ii,:);
     xf = [xf zeros(1,w_post)];
-    for i=1:nspk                          %Eliminates artifacts
-        if max(abs( xf(index(i)-w_pre:index(i)+w_post) )) < thr * 4
+    parfor i=1:nspk                          %Eliminates artifacts
+        if max(abs( xf(index(i)-w_pre:index(i)+w_post) )) < thr * 50
             spikes(i,:)=xf(index(i)-w_pre-1:index(i)+w_post+2);
         end
     end

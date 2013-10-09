@@ -1,4 +1,4 @@
-function [x, f, resnorm, r,o] = fit_eLIF_to_dIV(X, Y, C)
+function [x, f, resnorm, r,o] = fit_eLIF_to_dIV(X, Y, C, x0)
 % Fits a dynamic IV curve to an exponential integrate and fire model
 % neuron.
 % It might be necessary to select the values of Y.
@@ -16,12 +16,18 @@ function [x, f, resnorm, r,o] = fit_eLIF_to_dIV(X, Y, C)
 
 f = @(a,X)(1.0/a(1))*(a(2) - X + (a(3) * exp((X - a(4))/a(3))));
 % Initial values
-x0 = [20,-60,1,-40];
+if ~(exist('x0','var')),x0 = [20,-60,1,-40];end
 % Lower bounds
-lb = [0,-80,0,-80];
+lb = [0,-90,0,-90];
 % Upper bounds
-ub = [100,-20,15,-20];
-options = optimset('TolFun',1e-6,'maxiter',1000);
-
+ub = [100,-30,15,-30];
+options = optimset('TolFun',1e-6,'maxiter',100,'display','off');
+[X,idx] = sort(X);
+Y = Y(idx);
+% figure(9),clf
+%  plot(X,-Y/C,'ko')
 [x,resnorm,r,~,o] = lsqcurvefit(f,x0,X,-Y/C,lb,ub,options);
+%  hold on;plot(X,f(x,X),'r')
+%  pause
+
 

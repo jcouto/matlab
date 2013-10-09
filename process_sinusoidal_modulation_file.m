@@ -59,6 +59,7 @@ stim.m = metadata(sinidx,3); %sinusoidal modulation amplitude
 stim.tstart = tprot(end-2); %start of stim
 stim.tend = tprot(end-1); %end of stim
 stim.sinusoidal = @(t)stim.m*sin(2*pi*stim.F*t+0); %if it is a sinusoidal
+
 % Estimate capacitance from noisy trace
 if (stim.F > 0) && (abs(stim.m) > 0)
     found_sinusoid = 1;
@@ -73,7 +74,10 @@ if (stim.sigma>0 || stim.tau>0)
     [spont.C,spont.Ce,spont.var_I] = estimate_capacitance_from_noisy_trace...
         (tall(cidx),Vall(cidx),Iall(cidx),spont.Vm);
 end
-int_factor = 5;
+stim.Vm = mean(Vall(cidx));
+stim.Vm_std = std(Vall(cidx));
+
+int_factor = 3;
 
 % Interpolates the spike waveforms to get the corrected spike time
 stim_spk = find(spk>stim.tstart&spk<stim.tend);

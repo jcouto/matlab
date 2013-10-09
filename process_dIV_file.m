@@ -1,12 +1,13 @@
 function [outvar] = process_dIV_file(ii,tt,plotvar)
+%[outvar] = process_dIV_file(ii,tt,plotvar)
 % ii - file number (from sorted list)  - defaul:t last file.
 % tt - [tmin,tmax] interval used to compute the dIV - default: all noisy
 % trace.
 % plotvar - if defined produces a plot - default:yes
 
 
-MAX_dIv_VALUE = 30;
-MAX_dI_VOLT = -40;
+MAX_dIv_VALUE = 10;
+MAX_dI_VOLT = -20;
 MIN_dI_VOLT = -100;
 WINDOW = 100;
 SAVE_FILE = 'dIV';
@@ -27,11 +28,14 @@ end
 if isempty(tt)
     tt = [tprot(end) - tprot(end-1), tprot(end-1)];
 end
-Vrest = mean(Vall(tall>0 & tall<=tprot(1)));
+
+mask = spike_mask(Vall,diff(tall(1:2)));
+Vrest = median(Vall(~mask))%(tall>0 & tall<=tprot(1))))
 %Use only a stretch
 t = tall(tall>tt(1)&tall<=tt(2));
 V = Vall(tall>tt(1)&tall<=tt(2));
 I = Iall(tall>tt(1)&tall<=tt(2));
+
 dt = t(2)-t(1);
 dVdt = (diff(V)*1e-3)./dt;
 
@@ -51,7 +55,7 @@ if ~isempty(plotvar)
     
 end
 
-[C,capacitance.Ce,capacitance.var_I,p_C] = estimate_capacitance_from_noisy_trace(t,V,I,Vrest,plotvar);
+[C,capacitance.Ce, capacitance.var_I, p_C] = estimate_capacitance_from_noisy_trace(t,V,I,Vrest,plotvar);
 
 
 if ~isempty(plotvar)
@@ -60,18 +64,22 @@ if ~isempty(plotvar)
     ylabel('I_m (pA)');
 end
 
-[dIV.raw_points.x, dIV.raw_points.y, Im, dI_V, dI_mu, dI_s, p_dIV] = ...
+[dIV.raw_points.x, dIV.raw_points.y, Im, dI_V, dI_mu, dI_s, post_spk_data] = ...
     extract_dIV(t, V, I, C, WINDOW, plotvar);
 
-
-idx = (dI_V>MIN_dI_VOLT & dI_V<=MAX_dI_VOLT & ~isnan(dI_mu)& -dI_mu/C <= MAX_dIv_VALUE );%
-[x, f, resnorm, r,fit_output] = fit_eLIF_to_dIV(dI_V(idx), dI_mu(idx),C);
+idx = (dI_V>MIN_dI_VOLT & dI_V<=MAX_dI_VOLT & -dI_mu/C <= MAX_dIv_VALUE );%
+% [x, f, resnorm, r,fit_output] = fit_EIF_to_dIV(dI_V(idx), dI_mu(idx),C);
+[x, f, resnorm, r,fit_output] = fit_rEIF_to_dIV(dI_V(idx), dI_mu(idx),...
+    post_spk_data.V,post_spk_data.Im,post_spk_data.t,C);
 
 capacitance.C = C;
 capacitance.Vrest = Vrest;
 
 % Prepare output structure
 expName = regexp(pwd,'[0-9]{8}[A-Z][0-9]{2}','match');
+if isempty(expName)
+    expName = {'unknown'};
+end
 outvar.expName = expName{end};
 outvar.capacitance = capacitance;
 outvar.dIV.Id = dI_mu;
@@ -159,16 +167,19 @@ metadata = [];
 [ent, info] = load_h5_trace(file.path);
 idx = find(strcmp('RealNeuron',{ent.name}));
 idx = [idx, find(strcmp('AnalogInput',{ent.name}))];
+if isempty(idx)
+    idx = find(strcmp('ConductanceBasedNeuron',{ent.name}));
+end
 V = [ent(idx(1)).data];
 t = linspace(0,info.tend,length(V));
 % Do we need AEC?
-if isempty(ent(idx(1)).metadata) && ~isempty(kfiles)
-    % Is there I?
-    idx = find(strcmp('Waveform',{ent.name}));
-    metadata = ent(idx).metadata;
-    % if there was a holding potential include it on the AEC current
-    idx = [idx,find(strcmp('Constant',{ent.name}))];
-    I = sum(vertcat(ent(idx).data),1);
+idx = find(strcmp('Waveform',{ent.name}));
+metadata = ent(idx).metadata;
+% if there was a holding potential include it on the AEC current
+idx = [idx,find(strcmp('Constant',{ent.name}))];
+I = sum(vertcat(ent(idx).data),1);
+if ~isempty(kfiles)
+    % Is there AEC?    
     [~,k]  = min((file.date) - [kfiles.date]);
     Ke=load(kfiles(k).path);
     V = AECoffline(V,I,Ke);

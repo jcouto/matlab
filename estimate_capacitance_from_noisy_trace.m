@@ -10,39 +10,42 @@ function [Cm,Ce,Variance_estimate,p] = estimate_capacitance_from_noisy_trace(t,V
 %
 % NOTE:
 % The resolution is dictated by the variable CSTEP, which can be set in
-% the fuction code.
-% TODO:
-% Use a minimization algorigthm instead of the calculating the values for
-% CMIN:CSTEP:CMAX
+% the fuction code (for ploting only).
+
 
 %%% Parameters:
-CMIN = 10;      %pF
+CMIN = 0.10;      %pF
 CMAX = 1000;    %pF
 CSTEP = 1;      %pF
 DELTAV = 1;     %mV
+CGUESS = 250.0;
+
 p = [];
 %%%
-idx = find(I == I(1));
 if ~exist('Vrest','var')
     Vrest = [];
 end
+
 if isempty(Vrest)
-    Vrest = median(V(idx));
+    mask = spike_mask(V,diff(t(1:2)));
+    Vrest = median(V(~mask));
 end
 dt = t(2)-t(1);
 dVdt = diff(V)./(dt*1.e3);
-
-Ce = CMIN:CSTEP:CMAX;
-Variance_estimate = nan(size(Ce));
-
 idx = find(V(1:end-1)>=(Vrest-DELTAV) & V(1:end-1)<=(Vrest+DELTAV));
+Fx = @(x)var((I(idx)./x) - dVdt(idx));
+[Cm] = fminsearch(Fx,CGUESS)
 
-parfor ii = 1:length(Ce)
-    Variance_estimate(ii) = var((I(idx)./Ce(ii)) - dVdt(idx));
+
+if nargout>1 | exist('plotvar','var')
+    Ce = CMIN:CSTEP:CMAX;
+    Variance_estimate = nan(size(Ce));
+    parfor ii = 1:length(Ce)
+        Variance_estimate(ii) = Fx(Ce(ii));
+    end
+    [min_variance,C]=min(Variance_estimate);
+   % Cm = Ce(C);
 end
-[min_variance,C]=min(Variance_estimate);
-Cm = Ce(C);
-
 if exist('plotvar','var') && ~isempty(plotvar)
     
     p(1) = plot(Ce,Variance_estimate,'linewidth',0.7,'color','k');

@@ -3,6 +3,11 @@ function process_sinusoidal_modulation_folder(folder)
 if ~exist('folder','var')
     folder = pwd;
 end
+expName = regexp(pwd,'[0-9]{8}[A-Z][0-9]{2}','match');
+if exist(sprintf('processed_modulation_data%s.mat',expName{1}),'file');
+    fprintf(1,'Data already processed!!\n Doing it again..\n')
+    
+end
 previous_folder = pwd;
 cd(folder)
 %% Compute the sin modulation if needed
@@ -54,9 +59,11 @@ spk.slope = nan(length(data),1);
 spk.thresh = nan(length(data),1);
 spk.ahp = nan(length(data),1);
 % Stimulation ASSUMES THEY ARE ALL THE SAME
-stim.sigma = data(1).stim.sigma;
-stim.mean = data(1).stim.mean;
-stim.tau = data(1).stim.tau;
+stim.sigma = nan(length(data),1);%data(1).stim.sigma;
+stim.mean = nan(length(data),1);%data(1).stim.mean;
+stim.tau = nan(length(data),1);%data(1).stim.tau;
+Vm = nan(length(data),1);
+Vm_std = nan(length(data),1);
 % Coefficient of variation (in the absence of stimulation)
 for ii = 1:length(data)
     F(ii) = data(ii).stim.F;
@@ -70,6 +77,11 @@ for ii = 1:length(data)
     spk.thresh(ii) = mean(data(ii).spont.spk_Vthr);
     spk.ahdp(ii) = mean(data(ii).spont.spk_ahdp);
     spk.frate(ii) = nanmean(1./diff(data(ii).spont.spks));
+    stim.tau(ii) = data(ii).stim.tau;
+    stim.sigma(ii) = data(ii).stim.sigma;
+    stim.mean(ii) = data(ii).stim.mean;
+    Vm(ii) = data(ii).stim.Vm;
+    Vm_std(ii) = data(ii).stim.Vm_std;
 end
 % Sort indexes for the frequency
 [~,idx] = sort(F);
@@ -83,7 +95,7 @@ else
     firingRate = nan;
     capacitance = nan;
 end
-expName = data(1).expName;
+expName = data(1).expName
 %% Plot figure with all the histograms on the same page.
 cc = setFigureDefaults;
 ax = [];
@@ -134,60 +146,59 @@ end
 
 %% Compute the Transfer Function fit
 % adjust the values of phi be monotonically decreasing
-tmpphi = phi(idx);
-start = find(tmpphi < 0, 1);
-for k=start+1:length(tmpphi)
-    while tmpphi(k) > tmpphi(k-1)+pi/2
-        tmpphi(k) = tmpphi(k) - 2*pi;
-    end
-end
-if tmpphi(1) < -pi
-    tmpphi = tmpphi+2*pi;
-end
-
-w = [diff(reshape([conf.r1],[2,length([conf.r1])/2]))./diff(reshape([conf.r0],[2,length([conf.r0])/2]));diff(reshape([conf.phi],[2,length([conf.phi])/2]))];
-[A,Z,P,Dt,Mopt,Nopt,fvar] = fitTransferFunction(F(idx), (r1(idx)./r0(idx))',tmpphi',[1:2], [2:3],w(:,idx)');
-
+tmpphi = fix_phi(phi(idx));
+% Do the same for the shuffled stuff...
+tmpphi_shuffled = [conf.phi];
+tmpphi_shuffled = fix_phi(tmpphi_shuffled(idx));
+%
+w = [diff(reshape([conf(idx).r1],...
+    [2,length(idx)]));diff(reshape([conf(idx).phi],...
+    [2,length(idx)]))];
+%
+%[A,Z,P,Dt,offset,Mopt,Nopt,~,~,~,fvar] = fitTransferFunction(F(idx), (r1(idx)./r0(idx))',tmpphi',[1:2], [2:3],1./w');
+[A,Z,P,Dt,offset,Mopt,Nopt,~,~,~,fvar] = fitTransferFunction(F(idx), (r1(idx)./r0(idx))',tmpphi',2, 3,1./w');
 
 %% save data
 
-savedata = spk;
+savedata = spk; % WARNING: spk values have not been sorted by frequency!!!!
 savedata.expName = expName;
 % Modulation
-savedata.r0 = r0;
-savedata.r1 = r1;
-savedata.phi = phi;
-savedata.corrected_phi = ipermute(tmpphi,idx);
-savedata.conf = conf;
-savedata.shuffled_r0 = shuffled_r0;
-savedata.shuffled_r1 = shuffled_r1;
-savedata.shuffled_phi = shuffled_phi;
-savedata.r = r;
-savedata.N = N;
-savedata.F = F;
-savedata.C = C;
-savedata.sigma = stim.sigma;
-savedata.mean = stim.mean;
-savedata.tau = stim.tau;
-savedata.sort_F_idx = idx;
+savedata.r0 = r0(idx);
+savedata.r1 = r1(idx);
+savedata.phi = phi(idx);
+savedata.corrected_phi = tmpphi;%ipermute(tmpphi,idx);
+savedata.conf = conf(idx);
+savedata.shuffled_r0 = shuffled_r0(idx);
+savedata.shuffled_r1 = shuffled_r1(idx);
+savedata.shuffled_phi = shuffled_phi(idx);
+savedata.corrected_shuffled_phi = tmpphi_shuffled;
+savedata.r = r(idx);
+savedata.N = N(idx);
+savedata.F = F(idx);
+savedata.C = C(idx);
+savedata.sigma = stim.sigma(idx);
+savedata.mean = stim.mean(idx);
+savedata.tau = stim.tau(idx);
+savedata.sort_F_idx = idx; %to use ipermute if needed...
 savedata.CV = coeffVar; 
 savedata.frate = firingRate;
 savedata.capacitance = capacitance;
 savedata.A = A;
 savedata.P = P;
-savedata.Z = P;
+savedata.Z = Z;
 savedata.Dt = Dt;
+savedata.offset = offset;
 savedata.fit_eval = fvar;
 
 save(sprintf('processed_modulation_data%s.mat',expName),'-struct','savedata');
 
 %%
-fig = figure();
+fig = figure('visible','on');
 ax(1) = axes('position',[0.1,0.4,.4,.25],'yscale','linear','xscale','log');
-plot(fvar.f,10*log10(fvar.mag),'-','color',cc(1,:),'LineWidth',1.2);
+plot(fvar.f,20*log10(fvar.mag),'-','color',cc(1,:),'LineWidth',1.2);
 hold on;
-plot(F(idx),10*log10(r1(idx)./r0(idx)),'ko','MarkerFaceColor','k');
-plot(F(idx),10*log10(shuffled_r1(idx)./shuffled_r0(idx)),'o',...
+plot(F(idx),20*log10(r1(idx)./r0(idx)),'ko','MarkerFaceColor','k');
+plot(F(idx),20*log10(shuffled_r1(idx)./shuffled_r0(idx)),'o',...
     'Color',[.5,.5,.5],'MarkerFaceColor',[.5,.5,.5]);
 axis tight;
 for i=1:length(Z)
@@ -207,7 +218,7 @@ text(P(find((P>1 & P<2000),1,'last')),min(ylim),sprintf('\t\tPoles (%d)',Nopt),'
     'left','rotation',90);
 end
 xlabel('Frequency (Hz)')
-ylabel('10log_{10}({r_1/r_0}) (dB)');
+ylabel('20log_{10}({r_1/r_0}) (dB)');
 
 ax(2) = axes('position',[0.1,0.7,.4,.25],'yscale','linear','xscale','log',...
     'ycolor','k','yaxislocation','left');
@@ -233,8 +244,8 @@ ax(3) = axes('position',[0.1,0.1,.4,.2],'yscale','linear','xscale','log');
 % Plot phase
 plot(F(idx),tmpphi*180/pi,'ko-','LineWidth',1,'MarkerFaceColor','k');
 hold on;
-plot(F(idx),180/pi*shuffled_phi(idx),'bo','MarkerFaceColor',[.5,.5,.5]);
-plot(fvar.f,fvar.phi*180/pi,'-','color',cc(1,:),'LineWidth',1.2);
+%plot(F(idx),180/pi*tmpphi_shuffled,'bo','MarkerFaceColor',[.5,.5,.5]);
+plot(fvar.f,(fvar.phi)*180/pi,'-','color',cc(1,:),'LineWidth',1.2);
 xlabel('Frequency (Hz)')
 ylabel('Phase(\Phi)');
 for i=1:length(Z)
@@ -247,49 +258,56 @@ warning off
 linkaxes(ax,'x')
 warning on
 
-ax(4) = axes('position',[0.6,0.4,.3,.2],'xtick',[]);
-plot(C,'ko--','color','k','markerfacecolor','k');
+ax(4) = axes('position',[0.6,0.4,.3,.2],'xtick',[],'xcolor','w','xscale','log');
+plot(F(idx),C(idx),'ko--','color','k','markerfacecolor','k');
 ylabel('Capacitance estimate (pF)')
 ylim([0,800])
-ax(5) = axes('position',[0.6,0.4,.3,.2],'yaxislocation','right','ycolor',cc(1,:));
+ax(5) = axes('position',[0.6,0.4,.3,.2],'yaxislocation','right','ycolor',cc(1,:),'xscale','log');
 ylabel('Voltage (mV)')
-plot(spk.thresh(idx),'ko--','color',cc(1,:),'markerfacecolor',cc(1,:));
-text(max(xlim),max(spk.thresh),'threshold     ','color',cc(1,:),...
+plot(F(idx),spk.thresh(idx),'ko--','color',cc(1,:),'markerfacecolor',cc(1,:));
+text(max(xlim)*.1,max(spk.thresh),'threshold','color',cc(1,:),...
     'verticalalignment','bottom','horizontalalignment','right')
-plot(spk.height(idx),'ko--','color',cc(2,:),'markerfacecolor',cc(2,:));
+plot(F(idx),spk.height(idx),'ko--','color',cc(2,:),'markerfacecolor',cc(2,:));
 text(min(xlim),max(spk.height),'    height','color',cc(2,:),...
     'verticalalignment','bottom','horizontalalignment','left')
 
 
-ax(6) = axes('position',[0.6,0.7,.3,.2]);
-plot(spk.slope(idx),'ko--','color','k','markerfacecolor','k');
+ax(6) = axes('position',[0.6,0.7,.3,.2],'xtick',[],'xcolor','w','xscale','log');
+plot(F(idx),spk.slope(idx),'ko--','color','k','markerfacecolor','k');
 ylabel('Velocity (mV.ms-1)')
+ylim(nanmean(spk.slope)*[0.1,3])
 
-ax(7) = axes('position',[0.6,0.7,.3,.2],'yaxislocation','right','ycolor',cc(1,:));
-plot(spk.width(idx),'ko--','color',cc(1,:),'markerfacecolor',cc(1,:));
+ax(7) = axes('position',[0.6,0.7,.3,.2],'yaxislocation','right','ycolor',cc(1,:),'xscale','log');
+plot(F(idx),spk.width(idx),'ko--','color',cc(1,:),'markerfacecolor',cc(1,:));
 ylabel('Spike width (ms)')
-xlabel('Trial sorted by Frequency')
+xlabel('Frequency (Hz)')
 
-ylim([0.1,2])
+ylim(nanmean(spk.width)*[0.5,1.5])
 
 
-ax(8) = axes('position',[0.6,0.1,.3,.2],'yaxislocation','left','ycolor','k');
-plot(spk.frate(idx),'ko--','color','k','markerfacecolor',cc(1,:));
+ax(8) = axes('position',[0.6,0.1,.3,.2],'yaxislocation','left','ycolor','k','xscale','log');
+plot(F(idx),spk.frate(idx),'ko--','color','k','markerfacecolor',cc(1,:));
 ylabel('Spontaneous Firing rate (Hz)')
-xlabel('Trial sorted by Frequency')
+xlabel('Frequency (Hz)')
 ylim([0.1,1.5]*max(spk.frate))
+
+
+
 linkaxes(ax([4:8]),'x')
-xlim([0,length(idx)])
+set(ax([5,7,8]),'xtick',get(ax(1),'xtick'),'xlim',[0,max(F)])
 
 filename = sprintf('sinusoidal_modulation_%s_%02d',expName,figCounter);
 set(fig,'paperposition',[0,0,18,15],'papersize',[18,15],'paperunits','centimeters')
 print(fig,'-dpdf',sprintf('%s.pdf',filename))
-
+if ((length(unique([stim.mean]))==1) & ...        
+    (length(unique([stim.sigma]))==1) & ...
+    (length(unique([stim.tau]))==1))
+% then it is the same condition
 caption = sprintf(['Experiment %s. Transfer function fit of the input output',...
     ' relation. Noisy stimulation with std %3.2f pA and tau %3.2f ms. Frequency',...
     ' modulated from %.0f to %4.0fHz. Fitted with rational transfer function (%d x %d), the constant',...
     ' term is %3.1f, the zeros'],...
-    expName,stim.sigma,stim.tau,min(F),max(F),length(Z),length(P),A);
+    expName,unique([stim.sigma]),unique([stim.tau]),min(F),max(F),length(Z),length(P),A);
 for zz = 1:length(Z)
 caption = sprintf('%s %.2f,',caption,Z(zz));
 end
@@ -309,8 +327,26 @@ printFigWithCaption(sprintf('%s.pdf',filename),caption)
 if exist(sprintf('%sCaption.pdf',filename),'file');
     movefile(sprintf('%sCaption.pdf',filename),sprintf('%s.pdf',filename))
 end
-
+else
+    disp('The stimulation conditions are not unique!!!')
+    keybord
+end
+pause(3)
 close(fig)
 
 %%
 cd(previous_folder)
+
+function phi = fix_phi(phi)
+k = 1;
+if phi(k)>pi | phi(k) <-pi
+    phi(k) = mod(phi(k),2*pi);
+end
+for k=2:length(phi)%k=start+1:length (tmpphi)  
+    if phi(k)>pi | phi(k) <-pi
+        phi(k) = mod(phi(k),2*pi);
+    end
+    while phi(k) > phi(k-1)+pi/2
+        phi(k) = phi(k) - 2*pi;
+    end
+end

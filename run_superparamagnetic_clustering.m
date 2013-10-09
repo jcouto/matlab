@@ -5,28 +5,30 @@ fname='tmp_SPC';
 fname_in='spike_wavelets';
 save(fname_in,'inspk','-ascii');
 % DELETE PREVIOUS FILES
-warning off
-eval( ['delete([fname ''.dg_01.lab''])' ],'[];');
-eval( ['delete([fname ''.dg_01''])' ],'[];');
-warning on
+warning('off')
+eval(['delete([fname ''.dg_01.lab''])' ],'[];');
+eval(['delete([fname ''.dg_01''])' ],'[];');
+warning('on')
+dim=size(inspk,2);
 if ~exist('cluster_input','var')
-    cluster_input.mintemp = 0;                    %minimum temperature
+    cluster_input.mintemp = 0.00;                 %minimum temperature
     cluster_input.maxtemp = 0.201;                %maximum temperature
-    cluster_input.tempstep = 0.001;                %temperature step
+    cluster_input.tempstep = 0.01;                %temperature step
     cluster_input.num_temp = floor(...
         (cluster_input.maxtemp - ...
     cluster_input.mintemp)/cluster_input.tempstep); %total number of temperatures
-    cluster_input.stab = 0.8;                     %stability condition for selecting the temperature
+    %cluster_input.stab = 0.8;                    %stability condition for selecting the temperature
     cluster_input.SWCycles = 100;                 %number of montecarlo iterations
-    cluster_input.KNearNeighb = 11;               %number of nearest neighbors
+    cluster_input.KNearNeighb = 30;               %number of nearest neighbors
     cluster_input.randomseed = 0;                 % if 0, random seed is taken as the clock value
-    %cluster_input.randomseed = 19;              % If not 0, random seed
-    cluster_input.inputs = 10;
-    dim=cluster_input.inputs;
+    %cluster_input.randomseed = 19;               % If not 0, random seed
+    
 end
 
-tree = nan(cluster_input.num_temp,16);
-clus = nan(cluster_input.num_temp,size(inspk,1)+2);
+
+clu = [];
+tree = [];
+
 dat=load(fname_in);
 n=length(dat);
 fid=fopen(sprintf('%s.run',fname),'wt');
@@ -49,12 +51,12 @@ if cluster_input.randomseed ~= 0
 end
 fclose(fid);
 
-[str,maxsize,endian]=computer;
+[str,~,~]=computer;
 cluster_input.system=str;
 switch cluster_input.system
     case 'PCWIN'
         progpath = which('cluster_win.exe');
-        runcmd = sprintf('%s %s.run',progname,fname);
+        runcmd = sprintf('%s %s.run',progpath,fname);
     case 'MAC'
         progpath = which('cluster_mac.bin');
         runcmd = sprintf('%s %s.run',progpath,fname);
@@ -63,11 +65,12 @@ switch cluster_input.system
         runcmd = sprintf('%s %s.run',progpath,fname);
     otherwise  %(GLNX86, GLNXA64, GLNXI64 correspond to linux)
         progpath = which('cluster_linux.bin');
-        run_cmd = sprintf('%s %s.run',progpath,fname);
+        runcmd = sprintf('%s %s.run',progpath,fname);
 end
 [status,result] = system(runcmd);
 if status
     disp('SPC failed...')
+    disp(result)
 end
 if exist([fname '.dg_01.lab'],'file')
     clu=load([fname '.dg_01.lab']);

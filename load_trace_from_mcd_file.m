@@ -1,4 +1,5 @@
 function [data] = load_trace_from_mcd_file(hfile,ChannelType,channel,startend)
+%[data] = load_trace_from_mcd_file(hfile,ChannelType,channel,startend)
 % Loads the data from an mcd file.
 if ~exist('ChannelType','var')
     ChannelType = 'elec';

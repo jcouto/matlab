@@ -1,4 +1,5 @@
-function [temp] = find_tree_temperature(tree, cluster_input, n_spikes,min_clus_abs,min_clus_rel, min_clus,plotvar)
+function [temp_idx] = find_tree_temperature(tree, cluster_input, nspikes,min_clus_abs,min_clus_rel, min_clus,plotvar)
+%[temp_idx] = find_tree_temperature(tree, cluster_input, nspikes,min_clus_abs,min_clus_rel, min_clus,plotvar)
 % Selects the temperature of a spike sorting tree.
 % The arguments are:
 %    - tree: the cluster tree as computed by the superparamagnetic
@@ -12,10 +13,10 @@ function [temp] = find_tree_temperature(tree, cluster_input, n_spikes,min_clus_a
 % Returns the temperature
 
 if ~exist('min_clus_abs','var') || isempty('min_clus_abs') 
-    min_clus_abs = 30;
+    min_clus_abs = 80;
 end
 if isempty(min_clus_abs)
-    min_clus_abs = 30;
+    min_clus_abs = 80;
 end
 if ~exist('nspikes','var') || isempty('nspikes')
     nspikes = 6000;
@@ -33,7 +34,7 @@ if ~exist('min_clus','var')
 end
 
 if isempty(min_clus)
-    min_clus = max([min_clus_abs,min_clus_rel*nspikes]);
+    min_clus = max([min_clus_abs,min_clus_rel*nspikes])
 end
 
 num_temp = cluster_input.num_temp;
@@ -43,22 +44,22 @@ aux1=diff(tree(:,6));   % Changes in the second cluster size
 aux2=diff(tree(:,7));   % Changes in the third cluster size
 aux3=diff(tree(:,8));   % Changes in the third cluster size
 
-temp = 1;         % Initial value
+temp_idx = 1;         % Initial value
 
 for t=1:num_temp-1;
     % Looks for changes in the cluster size of any cluster larger than min_clus.
-    if ( aux(t) > min_clus | aux1(t) > min_clus | aux2(t) > min_clus | aux3(t) >min_clus )    
-        temp=t+1;         
+    if ( aux(t) > min_clus | aux1(t) > min_clus | aux2(t) > min_clus | aux3(t) > min_clus )    
+        temp_idx=t+1;         
     end
 end
 
 %In case the second cluster is too small, then raise the temperature a little bit 
-if (temp == 1 & tree(temp,6) < min_clus)
-    temp = 2;
+if (temp_idx == 1 & tree(temp_idx,6) < min_clus)
+    temp_idx = 2;
 end
 
 if exist('plotvar','var')
-    temperature=cluster_input.mintemp+temp*cluster_input.tempstep;
+    temperature=cluster_input.mintemp+temp_idx*cluster_input.tempstep;
     hold all
     plot([cluster_input.mintemp cluster_input.maxtemp-cluster_input.tempstep],[min_clus min_clus],'k:')
     plot(cluster_input.mintemp+(1:cluster_input.num_temp)*cluster_input.tempstep, ...

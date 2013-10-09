@@ -1,9 +1,9 @@
 function compute_prc_from_eLif(param,C,dt,Inoise,I0,Pamp,Pwidth)
-Pamp = 150; %pA
-Pwidth = 0.001; %s
+%Pamp = 150; %pA
+%Pwidth = 0.001; %s
 F = [];
 R = [];
-figure(1),clf
+figure(2),clf
 ax(1) = axes('position',[0.1,0.1,0.5,.8]);
 hold on
 for ii = 1:length(I0)
