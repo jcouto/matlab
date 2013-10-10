@@ -14,7 +14,7 @@ function [Cm,Ce,Variance_estimate,p] = estimate_capacitance_from_noisy_trace(t,V
 
 
 %%% Parameters:
-CMIN = 0.10;      %pF
+CMIN = 1;      %pF
 CMAX = 1000;    %pF
 CSTEP = 1;      %pF
 DELTAV = 1;     %mV

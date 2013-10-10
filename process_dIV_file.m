@@ -9,7 +9,7 @@ function [outvar] = process_dIV_file(ii,tt,plotvar)
 MAX_dIv_VALUE = 10;
 MAX_dI_VOLT = -20;
 MIN_dI_VOLT = -100;
-WINDOW = 100;
+% WINDOW = 100;
 SAVE_FILE = 'dIV';
 SAVE_FIG = 'dIV';
 
@@ -64,13 +64,17 @@ if ~isempty(plotvar)
     ylabel('I_m (pA)');
 end
 
-[dIV.raw_points.x, dIV.raw_points.y, Im, dI_V, dI_mu, dI_s, post_spk_data] = ...
-    extract_dIV(t, V, I, C, WINDOW, plotvar);
+[eif, reif] = fit_rEIF_to_traces(t, V, I, C);
 
-idx = (dI_V>MIN_dI_VOLT & dI_V<=MAX_dI_VOLT & -dI_mu/C <= MAX_dIv_VALUE );%
-% [x, f, resnorm, r,fit_output] = fit_EIF_to_dIV(dI_V(idx), dI_mu(idx),C);
-[x, f, resnorm, r,fit_output] = fit_rEIF_to_dIV(dI_V(idx), dI_mu(idx),...
-    post_spk_data.V,post_spk_data.Im,post_spk_data.t,C);
+Im = (I - C*[dVdt(1),dVdt]);
+
+% [dIV.raw_points.x, dIV.raw_points.y, Im, dI_V, dI_mu, dI_s, post_spk_data] = ...
+%     extract_dIV(t, V, I, C, WINDOW, plotvar);
+% 
+% idx = (dI_V>MIN_dI_VOLT & dI_V<=MAX_dI_VOLT & -dI_mu/C <= MAX_dIv_VALUE );%
+% % [x, f, resnorm, r,fit_output] = fit_EIF_to_dIV(dI_V(idx), dI_mu(idx),C);
+% [x, f, resnorm, r,fit_output] = fit_rEIF_to_dIV(dI_V(idx), dI_mu(idx),...
+%     post_spk_data.V,post_spk_data.Im,post_spk_data.t,C);
 
 capacitance.C = C;
 capacitance.Vrest = Vrest;
@@ -82,19 +86,21 @@ if isempty(expName)
 end
 outvar.expName = expName{end};
 outvar.capacitance = capacitance;
-outvar.dIV.Id = dI_mu;
-outvar.dIV.Ids = dI_s;
-outvar.dIV.v = dI_V;
-outvar.dIV.fit_idx = idx;
-outvar.eLIFparam = x;
-outvar.eLIFfun = f;
-save(sprintf('dIV_%s.mat',expName{end}), '-struct', 'outvar');
+outvar.eif = eif;
+outvar.reif = reif;
+% outvar.dIV.Id = dI_mu;
+% outvar.dIV.Ids = dI_s;
+% outvar.dIV.v = dI_V;
+% outvar.dIV.fit_idx = idx;
+% outvar.eLIFparam = x;
+% outvar.eLIFfun = f;
+% /save(sprintf('dIV_%s.mat',expName{end}), '-struct', 'outvar');
 
 if ~isempty(plotvar)
     axes(ax(9))
-    plot(dI_V(idx), -dI_mu(idx)/C,'k','linewidth',1)
+    plot(eif.dIV_V, -eif.dIV_Im/C,'k','linewidth',1)
     hold on
-    plot(dI_V(idx),f(x,dI_V(idx)),'r','linewidth',1)
+    plot(eif.dIV_V,eif.f(eif.param,eif.dIV_V),'r','linewidth',1)
    
     xlabel('V (mV)');
     ylabel('F(V) (mV/ms)');
@@ -103,7 +109,7 @@ if ~isempty(plotvar)
     plot(t,V,'k')
     axis tight
     hold on
-    Vm = integrate_eLIF(x,t,I,C,V(1));
+    Vm = integrate_eLIF(eif.param,t,I,C,V(1));
     plot(t,Vm,'r')
     %     % eLIF response to DC current
     %     Vm2 = integrate_eLIF(x,t,150*ones(size(I)),C,V(1));

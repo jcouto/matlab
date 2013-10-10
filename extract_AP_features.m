@@ -1,5 +1,5 @@
 function [Vthr, height, slope, width, ahdp] = extractAPfeatures(X,dt,PLOT)
-% [V_THRESHOLD, HEIGHT, SLOPE, WIDTH,AFTER_POTENTIAL] = extractAPfeatures(X, DT, PLOT)
+% [V_THRESHOLD, HEIGHT, SLOPE, WIDTH,AFTER_POTENTIAL] = extract_AP_features(X, DT, PLOT)
 % Acts on rows.
 % Units:
 %     - X - mV
