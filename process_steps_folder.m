@@ -149,12 +149,13 @@ if exist('plotvar','var')
             'markersize',2.5)
         ylim([0,nanmax(fi.adapt)*1.5])
         axes(ax(2))
-        edges = [nanmin(fi.i)*0.8,nanmax(fi.i)*1.2];
+        edges = [nanmin(fi.i)*0.9,nanmax(fi.i)*1.1];
         plot(edges,polyval(fi.coeff,edges),'k','linewidth',1)
         ylim([0,nanmax(fi.f)])
         plot(fi.i,fi.f,'ko','markerfacecolor',cc(1,:),...
             'markersize',2.5)
         plot(fi.i,fi.n./fi.dur,'k+')
+        axis tight
     end
     if sum(vi.trials)
         axes(ax(3))
@@ -162,11 +163,13 @@ if exist('plotvar','var')
         plot(edges,polyval(vi.coeff,edges),'k','linewidth',1)
         errorbar(vi.i,vi.v-vm.v,vi.v_sd,'ko',...
             'markerfacecolor',cc(1,:),'markersize',2.5)
+        axis tight
         % Plot examples
         axes(ax(4)) % Pick 2 traces at random from fi and vi
         idx = find(vi.trials);
         idx = idx(randsample(length(idx),1));
         plot(t,V(idx,:),'k')
+        axis tight
     end
     if sum(vm.trials)
         axes(ax(5)) % Plot the evolution of vm
@@ -206,19 +209,19 @@ if sum(fi.trials)
     caption = sprintf(['%s A - Adaptation index (last isi divided by the ',...
         'first) versus the injected current (pA) - mean $%1.2f\\pm%1.2f$.'],caption,...
         nanmean(fi.adapt),nanstd(fi.adapt));
-    caption = sprintf(['%s B - Frequency-Current curve. The red dots are the mean ISI ',...
+    caption = sprintf(['%s B - Frequency-Current curve (N = %d traces). The red dots are the mean ISI ',...
         'in the last $%1.2f$s of the stimulus. The crosses the number of spikes divided ',...
         'by the duration. Firing frequency ranged from $%3.0f$ to $%3.0f$ Hz ($%3.0f$ to $%3.0f$ pA).',...
-        ' The FI relation is $%3.1f$ Hz/nA.'],caption,dur/FRACTION,nanmin(fi.f),nanmax(fi.f),...
+        ' The FI relation is $%3.1f$ Hz/nA.'],caption,sum(fi.trials),dur/FRACTION,nanmin(fi.f),nanmax(fi.f),...
         nanmin(fi.i),nanmax(fi.i),fi.coeff(1)*1e3);
 else
     caption = sprintf(['%s There where no evoked spikes: A,B and F empty.'],caption);
 end
 if sum(vi.trials)
-    caption = sprintf(['%s C - Voltage-Current curve. The red dots are the mean voltage ',...
+    caption = sprintf(['%s C - Voltage-Current curve (N = %d traces). The red dots are the mean voltage ',...
         'in the last $%1.2fs$ of the stimulus. The deflection ranged from $%3.0f$ to $%3.0f$ Hz',...
         ' ($%3.0f$ to $%3.0f$ pA). The membrane resistance is $%3.2f M\\Omega$.'],caption,...
-        dur/FRACTION,nanmin(vi.v),nanmax(vi.v),nanmin(vi.i),nanmax(vi.i),vi.coeff(1)*1e3);
+        sum(vi.trials),dur/FRACTION,nanmin(vi.v),nanmax(vi.v),nanmin(vi.i),nanmax(vi.i),vi.coeff(1)*1e3);
 else
     caption = sprintf(['%s There were no subthreshold trials so C is empty.'],caption);
 end
