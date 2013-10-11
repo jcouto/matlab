@@ -3,7 +3,8 @@ function R = readINI(configfile)
 % Reads a configuration (INI) file into a structure R;
 % R has the fields of the Nodes of the configuration file
 % and each of these is field with the properties.
-% Inspired in READCONF from Matlab Central. 
+% Inspired in a piece of code from http://rosettacode.org.
+% Joao Couto, October 2013
 % 
 if nargin<1, 
    R = [];
