@@ -1,6 +1,7 @@
-function [files,kfiles] = list_h5_files(folder, level, sorted)
+function [files,kfiles] = list_h5_files(folder, level, except_folder, sorted)
 % [files,kfiles] = list_h5_files(folder, level, sorted)
-% Finds all HDF5 files except those that have a *_kernel.dat companion. 
+% Finds all HDF5 (*.h5) files except those that have a *_kernel.dat companion. 
+% Ignores files in the except_folder (default: {'trash'})
 % Returns the files and kernel files sorted by name and in the shape of 
 % structures with fields:
 %       - path
@@ -15,7 +16,9 @@ function [files,kfiles] = list_h5_files(folder, level, sorted)
 %   files = list_h5_files;
 % Joao Couto, May 2013
 
-except_folder = {'trash'};
+if ~exist('trash','var')
+    except_folder = {'trash'};
+end
 files = {};
 kfiles = {};
 

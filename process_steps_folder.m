@@ -14,6 +14,13 @@ folder = cd(cd(folder));
 fprintf(1,'Loading traces from folder %s.\n',folder)
 [files,kfiles] = list_h5_files(folder);
 N = length(files);
+if N < 1
+    vi = [];
+    fi = [];
+    vm = [];
+    fprintf(1,'Folder does not contain experiment files.\n');
+    return
+end
 metadata = cell(N,1);
 [t,V,I,metadata{1},info] = i_load_compensated_voltage(files(1),kfiles);
 dt = info.dt;
@@ -58,11 +65,14 @@ fi.dur = dur;
 fi.fpost = nan(N,1);
 fi.npost = nan(N,1);
 
+spikes.shape = spkw;
+spikes.time = tspkw;
+spikes.timestamps = spks;
+
 vm.trials = false(N,1);
 vm.v = nan(N,1);
 vm.v_sd = nan(N,1);
 vm.dur = tstim;
-
 % Fraction of the stimulation to be used in the calculations of steady
 % state
 FRACTION = 3;
@@ -82,9 +92,11 @@ for ii = 1:N
             fi.n(ii) = length(spk((spk > tstim) & (spk < tpost)));
             fi.fpost(ii) = mean(1./isi((spk(1:end-1) > tpost)));
             fi.npost(ii) = length(spk((spk(1:end) > tpost)));
-            stim_isi = isi((spk(1:end-1) > tstim) & ...
-                (spk(1:end-1) < tpost));
-            fi.adapt(ii) = stim_isi(end)/stim_isi(1);
+            if length(spk) > 2
+                stim_isi = isi((spk(1:end-1) > tstim) & ...
+                    (spk(1:end-1) < tpost));
+                fi.adapt(ii) = stim_isi(end)/stim_isi(1);
+            end
             fi.trials(ii) = 1;
         else
             vi.v(ii) = mean(V(ii,(t > tpost - dur/FRACTION) & ...
@@ -100,13 +112,33 @@ for ii = 1:N
         end
     end
 end
-
 %% Fit fi and vi curves
 fi.expr = 'a*x+b';
 vi.expr = 'a*x+b';
 
-[fi.coeff] = polyfit(fi.i(fi.trials),fi.f(fi.trials),1);
-[vi.coeff] = polyfit(vi.i(vi.trials),(vi.v(vi.trials)-vm.v(vi.trials)),1);
+[fi.coeff] = polyfit(fi.i(~isnan(fi.f)),fi.n(~isnan(fi.f))./fi.dur,1);
+[vi.coeff] = polyfit(vi.i(~isnan(vi.v)),(vi.v(~isnan(vi.v))-vm.v(~isnan(vi.v))),1);
+
+vi.Rin = vi.coeff(1)*1e3;
+
+%% Save data
+expName = regexp(pwd,'[0-9]{8}[A-Z][0-9]{2}','match');
+if isempty(expName)
+    expName = {'unknown'};
+end
+expName = expName{end};
+
+%tmp = strsplit(folder,expName);
+tmp = regexp(folder,expName,'split');
+
+tmp = tmp{end};
+tmp(tmp =='/') = '_';
+appendix = sprintf('%s%s',expName,tmp);
+
+DATANAME = 'fi_vi.mat';
+
+dataName = sprintf('%s/%s_%s',folder,appendix,DATANAME);
+save(dataName,'fi','vi','vm','spikes','files','kfiles','expName','folder')
 
 %% Plots for fi, vi and vm
 if exist('plotvar','var')
@@ -131,7 +163,7 @@ if exist('plotvar','var')
     ax(6) = axes('position',[0.7,0.1,.25,.25]);
     xlabel('Voltage (mV)')% Vm summary
     ylabel('dVdt (mV/ms)')
-    
+    set(ax([1:3,5:6]),'ticklength',[0.025,0.03])
     label = 'ABCDEF';
     for ii = 1:length(ax)
         p = get(ax(ii),'position');
@@ -149,13 +181,12 @@ if exist('plotvar','var')
             'markersize',2.5)
         ylim([0,nanmax(fi.adapt)*1.5])
         axes(ax(2))
-        edges = [nanmin(fi.i)*0.9,nanmax(fi.i)*1.1];
+        edges = [nanmin(fi.i)*0.8,nanmax(fi.i)*1.2];
         plot(edges,polyval(fi.coeff,edges),'k','linewidth',1)
         ylim([0,nanmax(fi.f)])
         plot(fi.i,fi.f,'ko','markerfacecolor',cc(1,:),...
             'markersize',2.5)
         plot(fi.i,fi.n./fi.dur,'k+')
-        axis tight
     end
     if sum(vi.trials)
         axes(ax(3))
@@ -163,13 +194,12 @@ if exist('plotvar','var')
         plot(edges,polyval(vi.coeff,edges),'k','linewidth',1)
         errorbar(vi.i,vi.v-vm.v,vi.v_sd,'ko',...
             'markerfacecolor',cc(1,:),'markersize',2.5)
-        axis tight
         % Plot examples
         axes(ax(4)) % Pick 2 traces at random from fi and vi
         idx = find(vi.trials);
         idx = idx(randsample(length(idx),1));
         plot(t,V(idx,:),'k')
-        axis tight
+        
     end
     if sum(vm.trials)
         axes(ax(5)) % Plot the evolution of vm
@@ -194,66 +224,48 @@ if exist('plotvar','var')
         plot(xlim,[0,0],'k--')
         plot([0,0],ylim,'k--')
     end
+    %% Prepare caption
+    caption = sprintf(['Experiment %s. Performed %s. Computation of the cell FI',...
+        ' and VI curves.'],expName,datestr(files(1).date));
+    if sum(fi.trials)
+        caption = sprintf(['%s A - Adaptation index (last isi divided by the ',...
+            'first) versus the injected current (pA) - mean $%1.2f\\pm%1.2f$.'],caption,...
+            nanmean(fi.adapt),nanstd(fi.adapt));
+        caption = sprintf(['%s B - Frequency-Current curve (N = %d traces). The red dots are the mean ISI ',...
+            'in the last $%1.2f$s of the stimulus. The crosses the number of spikes divided ',...
+            'by the duration. Firing frequency ranged from $%3.0f$ to $%3.0f$ Hz ($%3.0f$ to $%3.0f$ pA).',...
+            ' The FI relation is $%3.1f$ Hz/nA.'],caption,sum(fi.trials),dur/FRACTION,nanmin(fi.f),nanmax(fi.f),...
+            nanmin(fi.i),nanmax(fi.i),fi.coeff(1)*1e3);
+    else
+        caption = sprintf(['%s There where no evoked spikes: A,B and F empty.'],caption);
+    end
+    if sum(vi.trials)
+        caption = sprintf(['%s C - Voltage-Current curve (N = %d traces). The red dots are the mean voltage ',...
+            'in the last $%1.2fs$ of the stimulus. The deflection ranged from $%3.0f$ to $%3.0f$ mV',...
+            ' ($%3.0f$ to $%3.0f$ pA). The membrane resistance is $%3.2f M\\Omega$.'],caption,...
+            sum(vi.trials),dur/FRACTION,nanmin(vi.v),nanmax(vi.v),nanmin(vi.i),nanmax(vi.i),vi.coeff(1)*1e3);
+    else
+        caption = sprintf(['%s There were no subthreshold trials so C is empty.'],caption);
+    end
+    if sum(vi.trials) || sum(fi.trials)
+        caption = sprintf(['%s D - Example voltage traces of 2 examples.'],caption);
+    end
+    if sum(vm.trials)
+        caption = sprintf(['%s E - Stability of the membrane potential in the ',...
+            'beginning of each trial.'],caption);
+    end
+    if sum(fi.trials)
+        caption = sprintf(['%s F - State plot of the first derivative versus the',...
+            ' voltage during a spike for the spiking trace displayed above (black)',...
+            ' and mean of all trials (red).'],caption);
+    end
+    FIGNAME = 'fi_vi.pdf';
+    figName = sprintf('%s/%s_%s',folder,appendix,FIGNAME);
+    set(fig,'paperposition',[0,0,18,10],'papersize',[18,10])
+    print(fig,'-dpdf',figName)
+    printFigWithCaption(figName,caption)
+    movefile([figName(1:end-4),'Caption.pdf'],figName)
 end
-
-%% Prepare caption
-expName = regexp(pwd,'[0-9]{8}[A-Z][0-9]{2}','match');
-if isempty(expName)
-    expName = {'unknown'};
-end
-expName = expName{end};
-
-caption = sprintf(['Experiment %s. Performed %s. Computation of the cell FI',...
-    ' and VI curves.'],expName,datestr(files(1).date));
-if sum(fi.trials)
-    caption = sprintf(['%s A - Adaptation index (last isi divided by the ',...
-        'first) versus the injected current (pA) - mean $%1.2f\\pm%1.2f$.'],caption,...
-        nanmean(fi.adapt),nanstd(fi.adapt));
-    caption = sprintf(['%s B - Frequency-Current curve (N = %d traces). The red dots are the mean ISI ',...
-        'in the last $%1.2f$s of the stimulus. The crosses the number of spikes divided ',...
-        'by the duration. Firing frequency ranged from $%3.0f$ to $%3.0f$ Hz ($%3.0f$ to $%3.0f$ pA).',...
-        ' The FI relation is $%3.1f$ Hz/nA.'],caption,sum(fi.trials),dur/FRACTION,nanmin(fi.f),nanmax(fi.f),...
-        nanmin(fi.i),nanmax(fi.i),fi.coeff(1)*1e3);
-else
-    caption = sprintf(['%s There where no evoked spikes: A,B and F empty.'],caption);
-end
-if sum(vi.trials)
-    caption = sprintf(['%s C - Voltage-Current curve (N = %d traces). The red dots are the mean voltage ',...
-        'in the last $%1.2fs$ of the stimulus. The deflection ranged from $%3.0f$ to $%3.0f$ Hz',...
-        ' ($%3.0f$ to $%3.0f$ pA). The membrane resistance is $%3.2f M\\Omega$.'],caption,...
-        sum(vi.trials),dur/FRACTION,nanmin(vi.v),nanmax(vi.v),nanmin(vi.i),nanmax(vi.i),vi.coeff(1)*1e3);
-else
-    caption = sprintf(['%s There were no subthreshold trials so C is empty.'],caption);
-end
-if sum(vi.trials) | sum(fi.trials)
-    caption = sprintf(['%s D - Example voltage traces of 2 examples.'],caption);
-end
-if sum(vm.trials) 
-    caption = sprintf(['%s E - Stability of the membrane potential in the ',...
-        'beginnign of each trial.'],caption);
-end
-if sum(fi.trials)
-    caption = sprintf(['%s F - State plot of the first derivative versus the voltage during a spike.'],caption);
-end
-%% Save figures and data
-tmp = strsplit(folder,expName);
-tmp = tmp{end};
-tmp(tmp =='/') = '_';
-appendix = sprintf('%s%s',expName,tmp);
-
-%%
-
-FIGNAME = 'fi_vi.pdf';
-DATANAME = 'fi_vi.mat';
-
-dataName = sprintf('%s/%s_%s',folder,appendix,DATANAME);
-save(dataName,'fi','vi','vm','files','kfiles','expName','folder')
-figName = sprintf('%s/%s_%s',folder,appendix,FIGNAME);
-%%
-print(fig,'-dpdf',figName)
-printFigWithCaption(figName,caption)
-movefile([figName(1:end-4),'Caption.pdf'],figName)
-
 
 
 function [t, V, I, metadata, info] = i_load_compensated_voltage(file,kfiles)
