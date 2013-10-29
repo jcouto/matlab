@@ -1,4 +1,4 @@
-function [outvar] = process_eif_file(fname,tt,plotvar)
+function [outvar] = process_eif_file(fname,tt,C,plotvar)
 %[outvar] = process_eif_file(fname,tt,plotvar)
 %     fname - name of the file to be analysed
 %     tt - [tmin,tmax] interval used to compute the dIV - default: all noisy
@@ -14,6 +14,7 @@ DATANAME = 'eif.mat';
 
 
 if ~exist('plotvar','var');plotvar = 1;end
+
 %% Find the file and compensate if needed.
 
 [foldername,fname] = fileparts(fname);
@@ -46,6 +47,13 @@ dt = tall(2)-tall(1);
 
 mask = spike_mask(Vall, dt);
 Vrest = median(Vall(~mask));%(tall>0 & tall<=tprot(1))))
+% Use the first part of the trace to get Vrest
+%if there are no spikes 
+
+% if isempty(find(Vall(tall<tt(1))>-20))
+%     Vrest = mean(Vall(tall<tt(1)));
+% end
+
 
 t = tall(tall>tt(1) & tall<=tt(2));
 V = Vall(tall>tt(1) & tall<=tt(2));
@@ -101,8 +109,11 @@ if ~isempty(plotvar)
 end
 
 %% Estimate capacitance
-deltav = 1.5;
-[C,capacitance.Ce, capacitance.var_I] = estimate_capacitance_from_noisy_trace(t,V,I,Vrest,deltav,plotvar);
+deltav = 1;
+[Cm,capacitance.Ce, capacitance.var_I] = estimate_capacitance_from_noisy_trace(t,V,I,Vrest,deltav,plotvar);
+
+if ~exist('C','var');C = [];end
+if isempty(C);C = Cm;end
 
 %% Get eif parameters
 [eif, reif,caption{3}] = fit_rEIF_to_traces(t, V, I, C,[ax{1}(4),fig(3)]);
@@ -143,18 +154,23 @@ save(sprintf('%s/%s_%s',foldername,appendix,DATANAME), '-struct', 'outvar');
 %% Plot
 if ~isempty(plotvar)
     axes(ax{1}(5))
-    plot(eif.dIV_V, -eif.dIV_Im/C,'k','linewidth',1)
-    plot(eif.dIV_V,eif.f(eif.param,eif.dIV_V),'r','linewidth',1)
+    idx = find(-eif.dIV_Im/C < 40,1,'last');
+    idx = 1:idx;
+    plot(eif.dIV_V(idx), -eif.dIV_Im(idx)/C,'k','linewidth',1)
+    edges = linspace(min(V),max(V),100);
     axis tight
-    tmpidx1 = find(-eif.dIV_Im/C < 20 & eif.dIV_V < 0,1,'last');
+    plot(edges,eif.f(eif.param,edges),'r','linewidth',1)
+%     tmpidx1 = find(-eif.dIV_Im/C < 20 & eif.dIV_V < 0,1,'last');
     
-    ylim([min(-eif.dIV_Im/C),10])
-    xlim(eif.dIV_V([1,tmpidx1]))
-    axes(ax{1}(4))
-    xlim(eif.dIV_V([1,tmpidx1]))
+%     ylim([min(-eif.dIV_Im/C),10])
+%     xlim([eif.dIV_V([1]),-30])
+%     axes(ax{1}(4))
+%     xlim(eif.dIV_V(idx))
+    ylim([min(ylim)-1,10])
+    set(ax{1}(4),'xlim',get(ax{1}(5),'xlim'))
+    
     axes(ax{1}(2));
-    idx = (t>tprot(end-2)-0.05 & t<tprot(end-2)+3);
-    
+    idx = (t>tprot(end-2)-0.05 & t<tprot(end-2)+3);    
     plot(t(idx),V(idx),'k')
     axis tight
     hold on
@@ -167,6 +183,14 @@ if ~isempty(plotvar)
     
     plot(t(idx),Im(idx),'k')
     axis tight
+    
+    set(ax{1},'box','off','tickdir','out','linewidth',0.7,'color','none')
+    set(ax{1}(3),'xscale','log','yscale','log')
+%     set(ax{1}(4),'ylim',[-3000,3000])
+    set(ax{1}(1),'xtick',[],'xcolor','w','ylim',[min(Im)*0.07,max(Im)*0.17])
+    
+    linkaxes(ax{1}(1:2),'x')
+    
     caption{1} = sprintf(['Experiment %s - %s: estimation of the exponential ',...
         'integrate and fire parameters. A - Transmembrane current (',...
         '$I_m(t) = I_{in} - CdV/dt$). B - Example of a recorded trace ',...
@@ -212,12 +236,7 @@ if ~isempty(plotvar)
     axis tight
     xlabel('V (mV)')
     ylabel('dVdt (mV/ms)')
-    set(ax{1},'box','off','tickdir','out','linewidth',0.7,'color','none')
-    set(ax{1}(3),'xscale','log','yscale','log')
-    set(ax{1}(4),'ylim',[-3000,3000])
-    set(ax{1}(1),'xtick',[],'xcolor','w','ylim',[-4e3,4e3])
     
-    linkaxes(ax{1}(1:2),'x')
     
     caption{2} = sprintf(['Experiment %s - %s: Action potential and membrane voltage',...
         ' statistics. A - histogram of the membrane voltage ($%3.1f \\pm %3.1f mV$).',...

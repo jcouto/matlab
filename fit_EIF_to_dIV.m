@@ -12,6 +12,7 @@ function [x, f, resnorm, r,o] = fit_eLIF_to_dIV(X, Y, C, x0)
 % For example:
 %idx = (dI_V>-100 & dI_V<=-40 & ~isnan(dI_mu)& -dI_mu/C <= 25 );%
 %[x] = fit_dIV_to_eLIF(dI_V(idx), dI_mu(idx),C)
+%label = {'Time constant (\tau_m)','Resting potential (E_m)', 'Spike width (/delta_T)','Spike threshold (V_t)'}
 %%
 
 f = @(a,X)(1.0/a(1))*(a(2) - X + (a(3) * exp((X - a(4))/a(3))));

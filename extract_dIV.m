@@ -1,4 +1,4 @@
-function [dI_V, dI_mu, dI_s, X, Y, p] = extract_dIV(t, V, I, C, window, plotvar)
+function [dI_V, dI_mu, dI_s, X, Y, p] = extract_dIV(t, V, I, C, window, NBINS, plotvar)
 % Extracts the dynamic IV curve from raw data
 % [X, Y, dI_V, dI_mu, dI_s, Im] = extract_dIV(t, V, I, C, window,plotvar)
 % Takes as inputs:
@@ -25,6 +25,10 @@ end
 if ~exist('window','var')
     window = 200;%ms
 end
+if ~exist('NBINS','var')
+    NBINS = 20;
+end
+
 p = [];
 % Calculate Im(t)
 dt = t(2)-t(1);
@@ -57,9 +61,9 @@ if (window ~= 0)
     Y = Im(~isnan(tmpV));
 end
 % binning of the dI(V) curve
-edges = linspace(min(V),max(V),100);
-
-
+tmp = diff([min(V),max(V)]);
+edges = linspace(min(V)+0.1*tmp,max(V)-0.3*tmp,NBINS);
+% edges = linspace(min(V),max(V),NBINS);
 
 [dI_V, dI_mu, dI_s] = bin_samples(X, Y, edges);
 

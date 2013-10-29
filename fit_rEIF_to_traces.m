@@ -21,12 +21,13 @@ if ~exist('plotvar','var')
 end
 caption = '';
 WINDOW = 200; % in ms 
-MAX_FV = 10;
+MAX_FV = 15;
+NBINS = 100;
 
 dt = diff(t(1:2));
 
 if length(plotvar)==2;axes(plotvar(1));end
-[X, Y] = extract_dIV(t, V, I, C, WINDOW, plotvar);
+[X, Y] = extract_dIV(t, V, I, C, WINDOW,NBINS, plotvar);
 % [x, f, resnorm, r,o] = fit_EIF_to_dIV(X(~isnan(Y)), Y(~isnan(Y)), C);
 [x, f] = fit_EIF_to_dIV(X(~isnan(Y) & -Y/C<MAX_FV),...
     Y(~isnan(Y) & -Y/C<MAX_FV), C);
@@ -36,7 +37,7 @@ eif.dIV_Im = Y;
 eif.param = x;
 eif.f = f;
 
-[~,spk_wave,tspk_wave, spkidx] = extract_spikes( V, [], t, 1, 3, 3);
+[timestamps,spk_wave,tspk_wave, spkidx] = extract_spikes( V, [], t, 1, 3, 3);
 
 
 %% Calculate the spike half width 
@@ -55,29 +56,32 @@ spk_width = spk_width./size(spk_wave,1); % in miliseconds!
 NWINDOWS = cumsum(ceil(spk_width*3) + ...
     [2,5,5,10,30,30,30,30,50,50,100,100,...
     100,200,200,500,700,1000,1000]);
+% Can only extract refractory properties when there are no spikes...
+NWINDOWS = NWINDOWS(NWINDOWS < max(diff(timestamps*1e3))*.7);
 
 spkmask = spike_mask(V,dt);
 
 dVdt = (diff(V)*1.0e-3)./dt;
 Im = (I - C*[dVdt(1),dVdt]);
 npoints = length(V);
-edges = linspace(min(V),max(V),100);
+tmp = diff([min(V),max(V)]);
+edges = linspace(min(V)+0.1*tmp,max(V)-0.4*tmp,NBINS);
 refractory_param = nan(length(NWINDOWS)-1,4);
 refractory_dIV_V = cell(length(NWINDOWS)-1,1);
 refractory_dIV_Im = cell(length(NWINDOWS)-1,1);
 for ii = 1:length(NWINDOWS)-1
         mask = false(size(V));
         window = int64((NWINDOWS(ii)/1000/dt:NWINDOWS(ii+1)/1000/dt));
-        for jj = 1:length(spkidx)
-            if (max(spkidx(jj)+window) < npoints)
+        for jj = 1:length(spkidx)-1
+            if (max(spkidx(jj)+window) < npoints) && (max(spkidx(jj)+window) < (1e-3 + spkidx((jj+1)))) 
                 mask(spkidx(jj)+window) = 1;
             end
         end
 %         disp([length(find(~mask | spkmask)),length(V)])
         maskedV = V; maskedV(~mask | spkmask) = nan;
-        [X, Y, ~] = bin_samples(V(~isnan(maskedV)), Im(~isnan(maskedV)), edges);
-        refractory_dIV_V{ii} = X;
-        refractory_dIV_Im{ii} = Y;
+        [X, Y, ~] = bin_samples(maskedV(~isnan(maskedV)), Im(~isnan(maskedV)), edges);
+        refractory_dIV_V{ii} = X(3:end); % discard the first samples...
+        refractory_dIV_Im{ii} = Y(3:end);
         [tmpx] = fit_EIF_to_dIV(X(~isnan(Y) & -Y/C<MAX_FV),...
             Y(~isnan(Y) & -Y/C<MAX_FV), C, x);
         refractory_param(ii,:) = tmpx;
@@ -122,12 +126,12 @@ if ~isempty(plotvar)
             'string',sprintf('%d - %d ms',NWINDOWS(ii),NWINDOWS(ii+1)),...
             'edgecolor','none','horizontalalignment','left',...
             'verticalalignment','top');
-        
-        plot(eif.dIV_V,eif.f(eif.param,eif.dIV_V),'k--')
+        edges = linspace(min(V),max(V),NBINS*4);
+        plot(edges,eif.f(eif.param,edges),'k--')
         plot(reif.dIV_V{ii},-reif.dIV_Im{ii}/C,'ko','markersize',3)
         tmp = find((-reif.dIV_Im{ii}/C)<15,1,'last');
-        axis tight; ylim([min(ylim),15]),xlim([min(xlim),reif.dIV_V{ii}(tmp)])
-        plot(eif.dIV_V,eif.f(reif.param(ii,:),eif.dIV_V),'r-')
+        axis tight; ylim([min(ylim),15]),xlim([min(xlim),-30])%reif.dIV_V{ii}(tmp)])
+        plot(edges,eif.f(reif.param(ii,:),edges),'r-')
         plot(xlim,[0,0],'k:')    
     end
     %linkaxes(ax(2:end))
