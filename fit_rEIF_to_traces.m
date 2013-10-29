@@ -23,6 +23,8 @@ caption = '';
 WINDOW = 200; % in ms 
 MAX_FV = 15;
 NBINS = 100;
+USE_FIXED_BINS = 1; % Uses fixed bins after the spike (easier to average)...
+
 
 dt = diff(t(1:2));
 
@@ -52,10 +54,13 @@ spk_width = spk_width./size(spk_wave,1); % in miliseconds!
 %%
 % Compute the points to be calculated. And grab for each spike that is
 % possible, the respective Im trace.
-
-NWINDOWS = cumsum(ceil(spk_width*3) + ...
-    [2,5,5,10,30,30,30,30,50,50,100,100,...
-    100,200,200,500,700,1000,1000]);
+if USE_FIXED_BINS
+    NWINDOWS = cumsum(5+[0,0,5,5,15,15,25,45,95,95]);
+else % points depend on the spk_width
+    NWINDOWS = cumsum(ceil(spk_width*3) + ...
+        [2,5,5,10,30,30,30,30,50,50,100,100,...
+        100,200,200,500,700,1000,1000]);
+end
 % Can only extract refractory properties when there are no spikes...
 NWINDOWS = NWINDOWS(NWINDOWS < max(diff(timestamps*1e3))*.7);
 

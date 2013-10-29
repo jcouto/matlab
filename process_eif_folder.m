@@ -36,7 +36,8 @@ tmp = [data.reif];
 ref_t = [];
 ref_param = [];
 for ii = 1:length(tmp)
-    ref_t = [ref_t, tmp(ii).windows(1:end-1)+diff(tmp(ii).windows)/2];
+    ref_t = [ref_t, tmp(ii).windows(1:end-1)];
+%     ref_t = [ref_t, tmp(ii).windows(1:end-1)+diff(tmp(ii).windows)/2];
     ref_param = vertcat(ref_param,tmp(ii).param);
 end
 %%
@@ -80,7 +81,8 @@ if plotvar
         ax(ii+2+size(var.param,2)) = subplot(2,5,ii+2+size(var.param,2)); 
         plot(var.ref_t,var.ref_param(:,ii),'ko')
         hold on
-        edges = linspace(min(var.ref_t),max(var.ref_t),10);
+        [~,edges] = max(arrayfun(@(x)length(x.windows),[data.reif]));
+        edges = [data(edges).reif.windows,max(data(edges).reif.windows)+50]
         [x,y,ys] = binSamples(var.ref_t,var.ref_param(:,ii),edges);
         errorbar(x,y,ys)
         
