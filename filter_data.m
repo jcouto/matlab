@@ -8,17 +8,17 @@ if ~exist('type','var');type = 'ellip';end
 switch type
     case 'ellip'
         if isempty(fmin)
-            [b,a]=ellip(2,0.1,40,[fmin]*2/(srate),'high');
+            [b,a]=ellip(2,0.1,40,[fmax]*2/(srate),'low');
         elseif isempty(fmax)
-            [b,a]=ellip(2,0.1,40,[fmin]*2/(srate),'low');
+            [b,a]=ellip(2,0.1,40,[fmin]*2/(srate),'high');
         else
             [b,a]=ellip(2,0.1,40,[fmin fmax]*2/(srate));
         end
     case 'butter'
         if isempty(fmin)
-            [b,a]=butter(4,[fmin]*2/(srate),'high');
-        elseif isempty(fmax)
             [b,a]=butter(4,[fmax]*2/(srate),'low');
+        elseif isempty(fmax)
+            [b,a]=butter(4,[fmin]*2/(srate),'high');
         else
             [b,a]=butter(4,[fmin fmax]*2/(srate));
         end

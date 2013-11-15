@@ -1,8 +1,24 @@
-function process_sinusoidal_modulation_folder(folder)
+function process_sinusoidal_modulation_folder(folder,holding_current,dendrite)
+% This function processes a sinusoidal modulation folder.
+% Inputs are :
+%   - folder: the name of the folder to be analysed
+%   - holding_current: array of currents injected using the amplifier.
+%   - dendrite ([1]): whether there is a dendrite input or it is all
+%   somatic (default). use 2,1 if the kernels are switched. 
+%TODO: This input will later be replaced with Ks and Kd 
+%
+%
 
 if ~exist('folder','var')
     folder = pwd;
 end
+if ~exist('dendrite','var')
+    dendrite = [0,1];
+end
+if ~exist('holding_current','var')
+    holding_current = [0,0];
+end
+
 expName = regexp(pwd,'[0-9]{8}[A-Z][0-9]{2}','match');
 if exist(sprintf('processed_modulation_data%s.mat',expName{1}),'file');
     fprintf(1,'Data already processed!!\n Doing it again..\n')
@@ -19,9 +35,9 @@ for ff = 1:length(files)
     [~,filename] = fileparts(files(ff).basename);
     if (sum(~cellfun(@isempty,strfind(data_files,filename)))<1)
         fprintf(1,'Processing file [%d/%d]: %s\n',ff,length(files),files(ff).basename);
-        [~,found_sinusoid] = process_sinusoidal_modulation_file(files(ff).path);
+        [~,found_sinusoid] = process_sinusoidal_modulation_file(files(ff).path,10,-25,'peak',holding_current,dendrite);
         if ~found_sinusoid
-            fprintf(1,'File [%d/%d]: %s .With did not have modulation.\n',ff,length(files),files(ff).basename);
+            fprintf(1,'File [%d/%d]: %s .Did not have modulation.\n',ff,length(files),files(ff).basename);
         end
     end
 end
@@ -275,22 +291,24 @@ text(min(xlim),max(spk.height),'    height','color',cc(2,:),...
 ax(6) = axes('position',[0.6,0.7,.3,.2],'xtick',[],'xcolor','w','xscale','log');
 plot(F(idx),spk.slope(idx),'ko--','color','k','markerfacecolor','k');
 ylabel('Velocity (mV.ms-1)')
-ylim(nanmean(spk.slope)*[0.1,3])
-
+if ~sum(isnan(spk.slope))
+    ylim(nanmean(spk.slope)*[0.1,3])
+end
 ax(7) = axes('position',[0.6,0.7,.3,.2],'yaxislocation','right','ycolor',cc(1,:),'xscale','log');
 plot(F(idx),spk.width(idx),'ko--','color',cc(1,:),'markerfacecolor',cc(1,:));
 ylabel('Spike width (ms)')
 xlabel('Frequency (Hz)')
-
+if ~sum(isnan(spk.width))
 ylim(nanmean(spk.width)*[0.5,1.5])
-
+end
 
 ax(8) = axes('position',[0.6,0.1,.3,.2],'yaxislocation','left','ycolor','k','xscale','log');
 plot(F(idx),spk.frate(idx),'ko--','color','k','markerfacecolor',cc(1,:));
 ylabel('Spontaneous Firing rate (Hz)')
 xlabel('Frequency (Hz)')
+if ~sum(isnan(spk.frate))
 ylim([0.1,1.5]*max(spk.frate))
-
+end
 
 
 linkaxes(ax([4:8]),'x')

@@ -26,7 +26,11 @@ for ii = 1 : length(spkidx)
     previous = previous + ceil((spkidx(ii) - previous)*4/5);
     [vals,tmp] = findpeaks(dvdt(previous:spkidx(ii)-1),'minpeakheight',10);
     [~,idx] = max(vals);
+    try
     onsets(ii) = previous + tmp(idx) - 1;
+    catch
+        fprintf(1,'spike_onsets: might of missed a peak here %d..\n',spkidx(ii))
+    end
     previous = spkidx(ii);
 end
-
+onsets = onsets(~isnan(onsets));

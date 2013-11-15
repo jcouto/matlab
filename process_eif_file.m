@@ -9,7 +9,6 @@ function [outvar] = process_eif_file(fname,tt,C,plotvar)
 MAX_dIv_VALUE = 10;
 MAX_dI_VOLT = -20;
 MIN_dI_VOLT = -100;
-
 DATANAME = 'eif.mat';
 
 
@@ -174,7 +173,7 @@ if ~isempty(plotvar)
     plot(t(idx),V(idx),'k')
     axis tight
     hold on
-    Vm = integrate_eLIF(eif.param,t,I,C,V(1));
+    Vm = integrate_EIF(eif.param,dt*1e3,I,C,V(1));
     plot(t(idx),Vm(idx),'r')
     %     % eLIF response to DC current
     %     Vm2 = integrate_eLIF(x,t,150*ones(size(I)),C,V(1));
@@ -262,6 +261,8 @@ end
 
 function [t, V, I, metadata, info] = i_load_compensated_voltage(file,kfiles)
 % Internal function to load voltage trace
+
+FILTERDATA = 0;
 V = [];
 I = [];
 metadata = [];
@@ -284,4 +285,7 @@ if ~isempty(kfiles)
     [~,k]  = min((file.date) - [kfiles.date]);
     Ke=load(kfiles(k).path);
     V = AECoffline(V,I,Ke);
+    if FILTERDATA
+        V = filter_data(V,[],5000,1.0/info.dt);
+    end
 end

@@ -1,5 +1,8 @@
-function [data,found_sinusoid] = process_sinusoidal_modulation_file(filename,nBins,threshold,detection_mode)
+function [data,found_sinusoid] = process_sinusoidal_modulation_file(filename,nBins,threshold,detection_mode,holding_current,dendrite)
 % This function processes a file that had a sinusoidal waveform injected.
+% [data,found_sinusoid] = process_sinusoidal_modulation_file(filename,nBins,threshold,detection_mode,dendrite)
+%
+%
 
 [files,kfiles] = list_h5_files;
 [~,filename,ext] = fileparts(filename);
@@ -8,14 +11,16 @@ found_sinusoid = 0;
 if ~exist('nBins','var');nBins = 10;end
 if ~exist('plotvar','var');plotvar = 1;end
 if ~exist('threshold','var')||isempty(threshold);threshold = -25;end
-
+if ~exist('holding_current','var');holding_current = [0,0];end
 if ~exist('spike_alignment_mode','var');spike_alignment_mode = 'peak';end % peak or thresh
+if ~exist('dendrite','var');dendrite = [1];end
 
-[tall,Vall,Iall,W,metadata] = i_load_compensated_voltage(file,kfiles);
+
+[tall,Vall,Iall,W,metadata,info,Vdall,Imall] = i_load_compensated_voltage(file,kfiles,holding_current,dendrite);
 
 % Assumes the last thing is the sinusoids protocol (and that there is a
 % tail just before the end).
-tprot = unique(cumsum(metadata(:,1)));
+tprot = unique(cumsum(metadata{1}(:,1)));
 % tstart_sin = tprot(end-2);
 % tend_sin = tprot(end-1);
 % V0 = nanmean(Vall(tall<tprot(1)));
@@ -25,7 +30,7 @@ dt = tall(2)-tall(1);
 
 [spk,spkwave,tspkwave] = extract_spikes( Vall, threshold, tall, 1, 3, 4);
 % Find Vm
-tprot = unique(cumsum(metadata(:,1)));
+tprot = unique(cumsum(metadata{1}(:,1)));
 spont.Vm = nanmean(Vall(tall<tprot(1)));
 spont.Vm_std = std(Vall(tall<tprot(1)));
 
@@ -44,18 +49,21 @@ spont.tspkwave = tspkwave;
     (spont.spkwave,dt);
 
 % Stimulation parameters
-noiseidx = find(metadata(:,2) == 2 | metadata(:,10) == 2);
-sinidx = find(metadata(:,2) == 3 | metadata(:,10) == 3);
+
+noiseidx = cellfun(@(x)find(x(:,2) == 2 | x(:,10) == 2),metadata,'uniformoutput',0);
+sinidx = cellfun(@(x)find(x(:,2) == 3 | x(:,10) == 3),metadata,'uniformoutput',0);
 
 stim.type = 'conductance';
 if strcmp(W.units,'pA')
     stim.type = 'current';
 end
-stim.mean = metadata(noiseidx,3);  %stim nanmean
-stim.sigma = metadata(noiseidx,4); %noise standard deviation
-stim.tau = metadata(noiseidx,5); %noise time constant
-stim.F = metadata(sinidx,4); %sinusoidal modulation frequency
-stim.m = metadata(sinidx,3); %sinusoidal modulation amplitude
+tmpA = cellfun(@(x)~isempty(x),noiseidx);
+tmpB = cellfun(@(x)~isempty(x),sinidx);
+stim.mean = metadata{tmpA}(noiseidx{tmpA},3);  %stim nanmean
+stim.sigma = metadata{tmpA}(noiseidx{tmpA},4); %noise standard deviation
+stim.tau = metadata{tmpA}(noiseidx{tmpA},5); %noise time constant
+stim.F = metadata{tmpB}(sinidx{tmpB},4); %sinusoidal modulation frequency
+stim.m = metadata{tmpB}(sinidx{tmpB},3); %sinusoidal modulation amplitude
 stim.tstart = tprot(end-2); %start of stim
 stim.tend = tprot(end-1); %end of stim
 stim.sinusoidal = @(t)stim.m*sin(2*pi*stim.F*t+0); %if it is a sinusoidal
@@ -149,15 +157,21 @@ switch found_sinusoid
     ax(1) = axes('position',[0.1,0.8,.8,.15]);
     pnperiods = 8;
     
-    tplot = spk(ceil(length(spk)/2)) - (pnperiods/2)./stim.F;;%stim.tstart+(stim.tend-stim.tstart)/2;
+    tplot = spk(ceil(length(spk)/2)) - (pnperiods/2)./stim.F;%stim.tstart+(stim.tend-stim.tstart)/2;
     plot(tall(tall>tplot&tall<tplot+pnperiods./stim.F),...
         Vall(tall>tplot&tall<tplot+pnperiods./stim.F),'k') % plot 5 periods
     hold on
+    
     % Plot spike times
     plot(repmat(spk(spk>tplot&spk<tplot+pnperiods./stim.F),2,1),...
         repmat(spont.Vm+[-3,2]',1,length(spk(spk>tplot&spk<tplot+pnperiods./stim.F))),...
         'color',cc(1,:),'linewidth',1.2)
     ylim(spont.Vm+[-10,+5])
+    if dendrite
+        plot(tall(tall>tplot&tall<tplot+pnperiods./stim.F),...
+            Vdall(tall>tplot&tall<tplot+pnperiods./stim.F),'k','color',cc(3,:))
+        ylim([min([spont.Vm-10,min(Vdall)]),max([spont.Vm+5,max(Vdall)])])
+    end
     ylabel({'Membrane voltage (mV)','(spikes are trimmed)'})
     % Plot sinusoid
     ax(2) = axes('position',get(ax(1),'position'),...
@@ -252,28 +266,57 @@ switch found_sinusoid
     end
 end % found_sinusoid
 
-function [t, V, I, W, metadata, info] = i_load_compensated_voltage(file,kfiles)
+function [t, V, I, W, metadata, info, Vd, Id] = i_load_compensated_voltage(file,kfiles,holding,dendrite)
 % Internal function to load voltage trace
 V = [];
 I = [];
-metadata = [];
+Vd = [];
+Id = [];
+metadata = {};
 [ent, info] = load_h5_trace(file.path);
 idx = find(strcmp('RealNeuron',{ent.name}));
 idx = [idx, find(strcmp('AnalogInput',{ent.name}))];
 V = [ent(idx(1)).data];
 t = linspace(0,info.tend,length(V));
+if dendrite
+    Vd = [ent(idx(end)).data];
+end
 % Do we need AEC?
 wave = find(strcmp('Waveform',{ent.name}));
-metadata = ent(wave).metadata;
-if isempty(ent(idx(1)).metadata)
-    % if there was a holding potential include it on the AEC current
-    idx = [wave,find(strcmp('Constant',{ent.name}))];
-    I = sum(vertcat(ent(idx).data),1);
-    [~,k]  = min((file.date) - [kfiles.date]);
-    Ke=load(kfiles(k).path);
-    V = AECoffline(V,I,Ke);
-end
 W = ent(wave);
+if isempty(ent(idx(1)).metadata)
+    if length(dendrite) == 1
+    % if there was a holding potential include it on the AEC current
+        idx = [wave,find(strcmp('Constant',{ent.name}))] + holding(1);
+        I = sum(vertcat(ent(idx).data),1);
+        [~,k]  = min((file.date) - [kfiles.date]);
+        Ke=load(kfiles(k).path);
+        V = AECoffline(V,I,Ke);
+        metadata = {ent(idx).metadata};
+    else
+        idx = find(strcmp('AnalogOutput',{ent.name})); % QUICKFIX!
+        I = ent(idx(dendrite(1))).data + holding(1);
+        Id = ent(idx(dendrite(2))).data + holding(2); 
+        metadata = {ent(idx).metadata};
+        W = ent(idx(end));
+        
+        idx = find(strcmp('AnalogInput',{ent.name}));
+        V = ent(idx(dendrite(1))).data;
+        Vd = ent(idx(dendrite(2))).data;
+        Ks = load(kfiles(dendrite(1)).path);
+        Kd = load(kfiles(dendrite(2)).path);
+        
+
+        V = AECoffline(V,I,Ks);
+        Vd = AECoffline(Vd,Id,Kd);
+        
+       
+    end
+ 
+
+end
+
+
 
 function [spk,correction_value] = int_spikes...
     (spk,spikes,dt,int_factor,spike_alignment_mode)
