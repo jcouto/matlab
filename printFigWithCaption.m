@@ -1,4 +1,4 @@
-function printFigWithCaption(figureFile,caption)
+function printFigWithCaption(figureFile,caption,overlap)
     % printFigWithCaption(figureFile,string)
     % Saves the figure to a file with caption given by string
     hideOutput=1; % zero for debug...
@@ -7,6 +7,9 @@ function printFigWithCaption(figureFile,caption)
         disp('--> Error [printFigWithCaption]: Can not find figure.')
         disp(['Filename : ',figureFile])
         return
+    end
+    if ~exist('overlap','var')
+        overlap = false;
     end
     % get the file absolute path if using ~ to get the user HOME
     tmp = strfind(figureFile,'~');
@@ -18,9 +21,9 @@ function printFigWithCaption(figureFile,caption)
         end
     end
     
-    tmpFname    = 'tempTEX.tex';
+    tmpFname    = 'tempTEX';
     % create tmp Latex file.
-    fid         = fopen(tmpFname,'w');
+    fid         = fopen([tmpFname,'.tex'],'w');
     sHeader     = {'\documentclass{article}', ...
                     '\usepackage{amsmath}', ...
                     '\usepackage[active,tightpage,textmath,displaymath,floats,graphics,previewborder=0.05cm]{preview}', ...
@@ -43,16 +46,20 @@ function printFigWithCaption(figureFile,caption)
         setenv('PATH', path1)
     end
     %pdflatex -jobname here tempTEX.tex
-    sSubmit = ['pdflatex -interaction=nonstopmode -jobname ','LatexTmp',' ',tmpFname];
+    sSubmit = ['pdflatex -interaction=nonstopmode -jobname ',tmpFname,' ',tmpFname,'.tex'];
     if hideOutput
         [tmpError,~]=system(sSubmit);
     else
         system(sSubmit);
     end
-%     
-    if ~tmpError && exist(['LatexTmp.pdf'],'file')
-        copyfile(['LatexTmp.pdf'],[figureFile(1:end-4),'Caption.pdf'])
-        delete(['LatexTmp.*'])
+%   
+    if exist([tmpFname,'.pdf'],'file')
+        if ~overlap
+            movefile([tmpFname,'.pdf'],[figureFile(1:end-4),'Caption.pdf'])
+        else
+            movefile([tmpFname,'.pdf'],figureFile)
+        end
+        
         delete([tmpFname(1:end-3),'*']) % delete tmp file and other crap that might of been generated...
     else
         disp('printFigWithCaption: Failed usign latex.')
