@@ -1,21 +1,20 @@
-function compute_prc_from_eLif(param,C,dt,Inoise,I0,Pamp,Pwidth)
-%Pamp = 150; %pA
-%Pwidth = 0.001; %s
+function compute_prc_from_EIF(par,dt,I0,Inoise,C,Func,Vreset,tarp,Pamp,Pwidth)
 F = [];
 R = [];
 figure(2),clf
 ax(1) = axes('position',[0.1,0.1,0.5,.8]);
 hold on
 for ii = 1:length(I0)
-    [x,y,frate] = i_compute_one_prc(param, C, dt, Inoise,I0(ii), Pamp, Pwidth);
+    [x,y,frate] = i_compute_one_prc(par,dt,I0(ii),Inoise,C,Func,Vreset,tarp,Pamp,Pwidth);
     if frate~=0
         [ptb,me,ml,ie,il] = compute_peak_to_baseline(x, y);
         R = [R,ptb];
         F = [F,frate];
         
-        plot(x,y.*1e3+.5*(ii-1),'k')
-        plot(x(ie),y(ie).*1e3+.5*(ii-1),'ko')
-        plot(x(il),y(il).*1e3+.5*(ii-1),'ko')
+        plot(x,y.*1e6+.5*(ii-1),'k')
+        plot(x(ie),y(ie).*1e6+.5*(ii-1),'ko')
+        plot(x(il),y(il).*1e6+.5*(ii-1),'ko')
+
         plot([0,1],[0,0]+.5*(ii-1),'--','color',[0.5,.5,.5])
         text(0.1,.5*(ii),sprintf('%3.f Hz',frate),'color','r')
     end
@@ -30,7 +29,7 @@ xlabel('Frequency (Hz)')
 ylabel('Peak to baseline')
 ylim([0,1])
 ax(3) = axes('position',[0.7,0.5,0.25,.35]);
-[~,~,~,t,Vref,V] = i_compute_one_prc(param, C, dt, Inoise,I0(ceil(length(I0)/2)), Pamp, Pwidth);
+ [~,~,~,t,Vref,V] = i_compute_one_prc(par,dt,I0(ceil(length(I0)/2)),Inoise,C,Func,Vreset,tarp,Pamp,Pwidth);
 plot(t*1e3,V,'r')
 hold on
 plot(t*1e3,Vref,'k')
@@ -41,35 +40,35 @@ set(gcf,'paperposition',[0,0,9,10],'papersize',[9,10],'paperunits','centimeters'
 print(gcf,'-dpdf','eLIF_model_prc.pdf')
 
 
-function [phi,dphi,frate,t,Vref,V] = i_compute_one_prc(param, C, dt, Inoise,I0, Pamp, Pwidth)
-% computes the Phase Response Curve from an eLIF neuron.
+function [phi,dphi,frate,t,Vref,V] = i_compute_one_prc(par,dt,I0,Inoise,C,Func,Vreset,tarp,Pamp,Pwidth)
+% Computes the Phase Response Curve from an EIF or a refEIF neuron.
 
-Treset = 0.5*1e-3;
 NPERT = 200;
 % Run once. Does the model fire?
 tmax = 1; %350 ms
 phi = [];
 dphi = [];
 frate = 0;
-t = 0:dt:tmax;
+t = 0:dt/1000:tmax;
 
-Vref = integrate_eLIF(param,t,I0*ones(size(t))+0*rand(size(t)),C,param(2),Treset);
-
-spks = find(Vref>0);
+if iscell(par)
+   Vref = integrate_refEIF(par{1},par{2},dt,I0*ones(size(t)),C,Func,Vreset,tarp);
+else
+    Vref = integrate_EIF(par,dt,I0*ones(size(t)),C,Vreset,tarp);
+end
+spks = argfindpeaks(Vref,0);%find(Vref>0);
 
 if length(spks)<4
     disp('Error...Not enough spikes..')
     return
 end
-
 if length(spks)>8
     tmax = t(spks(8));
 end
-t = 0:dt:tmax;
+t = 0:dt/1000:tmax;
+spks = spks(spks<length(t));
 Vref = Vref(find(t<=t(end)));
-spks = find(Vref>0);
 mean_isi = mean(diff(t(spks)*1e3));
-
 p_size = Pwidth/dt;
 min_stim_loc = spks(4);
 max_stim_loc = spks(4)+mean(diff(spks));
@@ -83,14 +82,19 @@ tau = nan(size(pert_loc));
 for ii = 1:length(pert_loc)
     I = I0*ones(size(t));
     I(pert_loc(ii):pert_loc(ii)+p_size) = Pamp+I0;
-    V = integrate_eLIF(param,t,I+Inoise*(rand(size(t))-0.5),C,param(2),Treset);
-    tmpspks = t(find(V>0))*1e3;
+   if iscell(par)
+       V = integrate_refEIF(par{1},par{2},dt,I+Inoise*(rand(size(t))-0.5),C,Func,Vreset,tarp);
+   else
+       V = integrate_EIF(par,dt,I+Inoise*(rand(size(t))-0.5),C,Vreset,tarp);
+   end
+   tmpspks = t(argfindpeaks(V,0))*1e3;
     Ptime(ii) = t(pert_loc(ii))*1e3;
     trials{ii} = tmpspks;
     spk_before = tmpspks(find(tmpspks<=Ptime(ii),1,'last'));
     spk_after = tmpspks(find(tmpspks>Ptime(ii),1,'first'));
     spk_advance(ii) = 1 - (spk_after - spk_before)/mean_isi;
     tau(ii) = Ptime(ii) - spk_before;
+    
 end
 frate = 1000.0/mean_isi;
 [tau,idx] = sort(tau);
@@ -100,13 +104,16 @@ dphi = (spk_advance(idx))./(Pamp*Pwidth*1e3);
 I = I0*ones(size(t));
 ii = (ceil(NPERT/2));
 I(pert_loc(ii):pert_loc(ii)+p_size) = Pamp+I0;
-V = integrate_eLIF(param,t,I+Inoise*(rand(size(t))-0.5),C,param(2),Treset);
+if iscell(par)
+    V = integrate_refEIF(par{1},par{2},dt,I+Inoise*(rand(size(t))-0.5),C,Func,Vreset,tarp);
+else
+    V = integrate_EIF(par,dt,I+Inoise*(rand(size(t))-0.5),C,Vreset,tarp);
+end
 
 % ax1 = axes('position',[0.1,.5,.8,.4]);
 % plot(t,Vref,'k-')
 % hold on
 % plot(t(spks),Vref(spks),'ko')
-
 
 % plot(t,V,'r')
 % axis tight
@@ -114,5 +121,4 @@ V = integrate_eLIF(param,t,I+Inoise*(rand(size(t))-0.5),C,param(2),Treset);
 % ax2 = axes('position',[0.1,.1,.35,.35]);
 % [tau,idx] = sort(tau);
 % plot(tau,spk_advance(idx),'-')
-
 

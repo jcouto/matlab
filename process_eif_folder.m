@@ -1,5 +1,5 @@
 function [var] = process_eif_folder(foldername,C,FORCE,plotvar)
-
+% Processes 
 if ~exist('C','var');C = []; end
 if ~exist('FORCE','var');FORCE = 0; end
 if ~exist('plotvar','var');plotvar = 1; end

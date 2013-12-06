@@ -9,6 +9,7 @@ function [out] = extract_triggered_complex_spikes(filename,PLOT)
 %close all
 %figure('visible','on')
 %for kk = 1:length(files)
+figuresVisible='off';
 if ~exist('PLOT','var')
     PLOT = 1;
 end
@@ -79,7 +80,7 @@ end
 if PLOT && ~isempty(out.cs_waves)
     if sum(~isnan(cs_waves(:)))>1
         cc = setFigureDefaults();
-        figure('visible','on')
+        figure('visible',figuresVisible)
         ax = axes('position',[.1,.1,.8,.8]);
         plot(out.twave,out.cs_waves,'k','linewidth',0.6)
         if size(out.cs_waves < 2,1)
