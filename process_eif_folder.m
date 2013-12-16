@@ -1,7 +1,8 @@
-function [var] = process_eif_folder(foldername,C,FORCE,plotvar)
-% Processes 
+function [var] = process_eif_folder(foldername,C,FORCE_FROM_SCRATCH,plotvar)
+% Processes [var] = process_eif_folder(foldername,C,FORCE_FROM_SCRATCH,plotvar)
+
 if ~exist('C','var');C = []; end
-if ~exist('FORCE','var');FORCE = 0; end
+if ~exist('FORCE_FROM_SCRATCH','var');FORCE_FROM_SCRATCH = 0; end
 if ~exist('plotvar','var');plotvar = 1; end
 
 if ~exist('foldername','var')
@@ -12,7 +13,7 @@ files = list_h5_files(foldername);
 for ii = 1:length(files)
     [folder,fname] = fileparts(files(ii).path);
     tmp = list_files(folder,sprintf('%s*eif.mat',fname));
-    if isempty(tmp) | FORCE
+    if isempty(tmp) | FORCE_FROM_SCRATCH
         tmp = process_eif_file(files(ii).path,[],C);
     else
         fprintf(1,'Skipping file %s\n',files(ii).path)

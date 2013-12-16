@@ -82,11 +82,15 @@ if PLOT && ~isempty(out.cs_waves)
         cc = setFigureDefaults();
         figure('visible',figuresVisible)
         ax = axes('position',[.1,.1,.8,.8]);
+        xlabel('Time from CS onset (ms)')
+        ylabel('Membrane voltage (mV)')
+        % Plot all waveforms
         plot(out.twave,out.cs_waves,'k','linewidth',0.6)
         if size(out.cs_waves < 2,1)
             plot(out.twave,mean(out.cs_waves),'color',cc(1,:),'linewidth',1)
         end
         axis tight
+        
         caption = sprintf(['Extracellular stimulation to recreate complex spikes',...
             ' in vitro. Filename: \\emph{%s}. Extracellular stimulation using $%d$ pulses',...
             ' per stimulus at around ($%3.2f$Hz). Number of evoked complex spikes: $%d$ of $%d$ stimuli.'],...
