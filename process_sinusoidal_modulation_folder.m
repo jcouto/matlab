@@ -42,12 +42,13 @@ for ff = 1:length(files)
     end
 end
 %% Gather all
-data_files = list_files('.','sin_mod_data*',1);
+data_files = list_files('.','sin_mod_data*');
 data = [];
+
 for ff = 1:length(data_files)
     data = [data, load(data_files{ff})];
 end
-no_mod_data_files =list_files('.','no_modulation_data*',1);
+no_mod_data_files =list_files('.','no_modulation_data*');
 no_mod_data = [];
 for ff = 1:length(no_mod_data_files)
     no_mod_data = [no_mod_data, load(no_mod_data_files{ff})];

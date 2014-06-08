@@ -287,8 +287,9 @@ W = ent(wave);
 if isempty(ent(idx(1)).metadata)
     if length(dendrite) == 1
     % if there was a holding potential include it on the AEC current
-        idx = [wave,find(strcmp('Constant',{ent.name}))] + holding(1);
-        I = sum(vertcat(ent(idx).data),1);
+        idx = [wave,find(strcmp('Constant',{ent.name}))];
+        I = sum(vertcat(ent(idx).data),1) + holding(1);
+        
         [~,k]  = min((file.date) - [kfiles.date]);
         Ke=load(kfiles(k).path);
         V = AECoffline(V,I,Ke);
