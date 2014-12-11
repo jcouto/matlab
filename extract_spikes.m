@@ -59,7 +59,9 @@ for ii = 1:N
         tt = min(median(data(ii,dVdt>100)));
     end
     idx         = argfindpeaks(data(ii,:), tt, int32(tdead./1000/dt));
-    spk_w{ii}   = extractTriggeredTraces(data(ii,:),idx,int32(tpre./1000/dt),int32(tpost./1000/dt));
+    
+    tmp   = extractTriggeredTraces(data(ii,:),idx,int32(tpre./1000/dt),int32(tpost./1000/dt));
+    spk_w{ii} = tmp;
     spk{ii}     = t(idx);
     spk_idx{ii} = idx;
 end

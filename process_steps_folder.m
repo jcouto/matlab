@@ -117,6 +117,7 @@ fi.expr = 'a*x+b';
 vi.expr = 'a*x+b';
 
 [fi.coeff] = polyfit(fi.i(~isnan(fi.f)),fi.n(~isnan(fi.f))./fi.dur,1);
+%[fi.coeff] = polyfit(fi.i(~isnan(fi.f)),fi.n(~isnan(fi.f))./fi.dur,1);
 [vi.coeff] = polyfit(vi.i(~isnan(vi.v)),(vi.v(~isnan(vi.v))-vm.v(~isnan(vi.v))),1);
 
 vi.Rin = vi.coeff(1)*1e3;

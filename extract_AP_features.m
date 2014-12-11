@@ -61,10 +61,13 @@ for ii = 1:N
             ti(find(Xi>=Vwidth,1,'last'))];
         
         width(ii)           = diff(tWidth);                         % ms
-        
         d1Xi = diff(Xi,1)/((dti*1e3)^1);
         id1V = find(abs(d1Xi(iMax:end))<rms(d1Xi)/10,1,'first')+iMax;
-        ahdp(ii)            = Xi(id1V) - Vthr(ii);                     % !!! mV
+        try
+            ahdp(ii)            = Xi(id1V) - Vthr(ii);                     % !!! mV
+        catch
+            ahdp(ii) = NaN;
+        end
         %disp('There is an after hiperpolarization!')
         
         if PLOT
@@ -75,7 +78,9 @@ for ii = 1:N
             
             plot(tip(iThr+(-3:3)),Xi(iThr*ones(7)),'r','linewidth',2)
             plot(tip(iMax+(-3:3)),Xi(iMax*ones(7)),'b','linewidth',2)
-            plot(tip(id1V(end)+(-3:3)),Xi(id1V(end)*ones(7)),'g-','linewidth',2)
+            try
+                plot(tip(id1V(end)+(-3:3)),Xi(id1V(end)*ones(7)),'g-','linewidth',2)
+            end
             if N < 2
                 text(tip(iThr-5),Vthr(ii),{['slope: ',num2str(slope(ii),'%3.1f'),'mV/ms'],...
                     ['height: ',num2str(height(ii),'%2.1f'),'mV/ms'],...

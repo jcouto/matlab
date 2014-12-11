@@ -25,47 +25,68 @@ stimidx = findTransitions(stim);
 stimidx = stimidx(stim(stimidx)>1);
 % Find the first of a burst
 nstimidx = stimidx(find(diff(stimidx)>(5*1e-3./info.dt))+1);
-
+try
+    previous_cs = t(stimidx(1));
+catch
+    disp(sprintf('Could not find stimulus for file: %s',filename))
+    out = [];
+    return
+end
 dt = info.dt;
 %Extract the CS waveforms
 wpre = 10;
 wpost = 60;
 cs_traces = extractTriggeredTraces(V,nstimidx,...
     int32(wpre./1e3./dt),int32(wpost./1e3./dt));
-MIN_CS_INTERVAL = 1.2;
-MAX_CS_INTERVAL = 4.5;
-%Ignore those that have no complex spike or that have complex spikes that
-%spiked just after the stimulation
+
+MIN_CS_INTERVAL = 0.01; % Set this to a higher value so that you ignore
+                        % traces that have complex spikes that
+                        % but also simple spikes just after the stimulation
+
+MAX_CS_INTERVAL = 10; % (delay to complex spike) if there is nothing
+                     % here it means that there
+                     % was no complex spike (nor any other for that
+                     % matter)
+
 % Align to the complex spike; not the stimulus.
 cs_waves = nan(size(cs_traces,1),int32((wpre-5)./1e3./dt)+int32((wpost-10)./1e3./dt));
 cs = nan(size(cs_traces,1));
 iCSi = nan(size(cs_traces,1));
-
-previous_cs = 0;
+% Aline traces to CS onset
 for ii = 1:size(cs_traces,1)
     idx = argfindpeaks(cs_traces(ii,int32(wpre./1e3./dt):end),-20,0.2./1e3./dt);
-    if ~isempty(idx)
-        cs(ii) = (stimidx(ii)+idx(1))*dt;
-        iCSi(ii) = cs(ii)-previous_cs ;
-        previous_cs = cs(ii);
-    end
     if ~(isempty(idx) ||...
             (~isempty(idx) && idx(1)>MAX_CS_INTERVAL*1e-3./info.dt) ||...
             (~isempty(idx) && idx(1)<MIN_CS_INTERVAL*1e-3./info.dt))
-        %cs_traces(ii,:) = nan;
+
+        cs(ii) = t(nstimidx(ii)+idx(1)-2);
+        % First spike is the complex spike!
+        iCSi(ii) = cs(ii)-previous_cs;
+        previous_cs = cs(ii);
+
         idx = idx(1)-1+int32((wpre)./1e3./dt);
         cs_waves(ii,:) = cs_traces(ii,idx-int32((wpre-5)./1e3./dt)+1:idx+int32((wpost-10)./1e3./dt));
     end
 end
 cs_waves(1,1) = nan; %discard first waveform;
+[folder,file] = fileparts(filename);
 
 out.cs_waves = cs_waves(~isnan(cs_waves(:,1)),:);
 out.twave = (1-((wpre-5)./1e3./dt):((wpost-10)./1e3./dt)).*(dt*1e3);
-out.stim_freq = (round(1./diff(nstimidx*info.dt)*100)./100);
+out.stim_freq = round(1./diff(nstimidx*info.dt)*100)./100.0;
 out.cs = cs(~isnan(cs_waves(:,1)));
-out.iCSi = iCSi(~isnan(cs_waves(:,1)));
+out.iCSi = round(iCSi(~isnan(cs_waves(:,1)))*1000)./1000.0;
 out.nstim_bursts = length(stimidx)./(length(nstimidx)+1);
-[folder,file] = fileparts(filename);
+out.filename = file;
+if (sum(cellfun(@isempty,strfind({ent.name},'RealNeuron'))) == length(ent))
+    out.rec_date = datenum(file,'yyyymmddHHMMSS')-info.tend/(24*60* ...
+                                                      60);
+else
+    out.rec_date = datenum(file,'yyyymmddHHMMSS');
+end    
+out.rec_dur = info.tend;
+% fprintf(1,'%s %s, %3.2f - %3.0f \n',datestr(out.rec_date),datestr(out.rec_date+ ...
+%                                                 info.tend/(60*60*24)),out.cs(end),info.tend)
 cwd = pwd;
 if length(folder) < 2
     folder = cd(cd('./'));

@@ -41,11 +41,14 @@ function out=plotRastergram(varargin)
             end
             
         case 'few' 
-            minimum=-0.4;
-            maximum=0.4;
+            minimum=-0.5;
+            maximum=0.5;
+            if (size(cc,1) ~= length(spikes))
+                cc = repmat(cc,length(spikes),1);
+            end
             for ii=1:length(spikes)
                 for jj=1:length(spikes{ii})
-                    line(spikes{ii}(jj).*[1,1],[minimum,maximum]+counter,'color',cc,'linewidth',linesize)
+                    line(spikes{ii}(jj).*[1,1],[minimum,maximum]+counter,'color',cc(ii,:),'linewidth',linesize)
                 end
                 counter=counter+1;
             end

@@ -31,9 +31,9 @@ freq = 0:Fs/length(x):Fs/2;
 
 if exist('PLOT','var')
     plot(freq,10*log10(psdx),'k'); grid on;hold on;
-    plot(freq,smooth(10*log10(psdx),100),'r');
+%     plot(freq,smooth(10*log10(psdx),100),'r');
     axis tight
-    set(gca,'yscale','log')
+    %set(gca,'yscale','log')
     axis tight
     xlabel('Frequency (Hz)'); ylabel('Power density (dB)');
     

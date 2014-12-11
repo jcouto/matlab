@@ -1,5 +1,5 @@
 function printFigWithCaption(figureFile,caption,overlap)
-    % printFigWithCaption(figureFile,string)
+    % printFigWithCaption(figureFile,caption,overwrite file)
     % Saves the figure to a file with caption given by string
     hideOutput=1; % zero for debug...
     % does the file exist
@@ -59,8 +59,9 @@ function printFigWithCaption(figureFile,caption,overlap)
         else
             movefile([tmpFname,'.pdf'],figureFile)
         end
-        
-        delete([tmpFname(1:end-3),'*']) % delete tmp file and other crap that might of been generated...
+        if hideOutput
+            delete([tmpFname(1:end-3),'*']) % delete tmp file and other crap that might of been generated...
+        end
     else
         disp('printFigWithCaption: Failed usign latex.')
     end

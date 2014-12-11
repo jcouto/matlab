@@ -87,8 +87,7 @@ function out = run_system_command(COMMAND)
 % Runs a system command and returns
 [result, out] = system(COMMAND);
 if result
-    fprintf(1,'Error parsing: %s ',COMMAND)
-    error('list_files')
+     error(['list_files error parsing: ', COMMAND])
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

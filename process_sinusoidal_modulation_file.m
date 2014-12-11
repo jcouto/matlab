@@ -13,11 +13,10 @@ if ~exist('plotvar','var');plotvar = 1;end
 if ~exist('threshold','var')||isempty(threshold);threshold = -25;end
 if ~exist('holding_current','var');holding_current = [0,0];end
 if ~exist('spike_alignment_mode','var');spike_alignment_mode = 'peak';end % peak or thresh
-if ~exist('dendrite','var');dendrite = [1];end
-
+if ~exist('dendrite','var');dendrite = [];end
+if ~exist('sortByTrial');sortByTrial=false;end
 
 [tall,Vall,Iall,W,metadata,info,Vdall,Imall] = i_load_compensated_voltage(file,kfiles,holding_current,dendrite);
-
 % Assumes the last thing is the sinusoids protocol (and that there is a
 % tail just before the end).
 tprot = unique(cumsum(metadata{1}(:,1)));
@@ -62,7 +61,11 @@ tmpB = cellfun(@(x)~isempty(x),sinidx);
 stim.mean = metadata{tmpA}(noiseidx{tmpA},3);  %stim nanmean
 stim.sigma = metadata{tmpA}(noiseidx{tmpA},4); %noise standard deviation
 stim.tau = metadata{tmpA}(noiseidx{tmpA},5); %noise time constant
-stim.F = metadata{tmpB}(sinidx{tmpB},4); %sinusoidal modulation frequency
+
+stim.F = metadata{tmpB}(sinidx{tmpB},4) %sinusoidal modulation frequency
+if stim.F > 2000
+    keyboard
+end
 stim.m = metadata{tmpB}(sinidx{tmpB},3); %sinusoidal modulation amplitude
 stim.tstart = tprot(end-2); %start of stim
 stim.tend = tprot(end-1); %end of stim
@@ -158,8 +161,9 @@ switch found_sinusoid
     pnperiods = 8;
     
     tplot = spk(ceil(length(spk)/2)) - (pnperiods/2)./stim.F;%stim.tstart+(stim.tend-stim.tstart)/2;
-    plot(tall(tall>tplot&tall<tplot+pnperiods./stim.F),...
-        Vall(tall>tplot&tall<tplot+pnperiods./stim.F),'k') % plot 5 periods
+    p = plot(tall(tall>tplot&tall<tplot+pnperiods./stim.F),...
+        Vall(tall>tplot&tall<tplot+pnperiods./stim.F),'k'); % plot 5 periods
+    set(p,'clipping','off')
     hold on
     
     % Plot spike times
@@ -207,7 +211,11 @@ switch found_sinusoid
     % Make a rasterplot triggered to the sinusoid.
     ax(4) = axes('position',[0.1,0.1,.4,.3],'ytick',[],'ycolor','w');
     [~,sortidx]=sort(cellfun(@(z)min(z),spk_mod));
-    plotRastergram(spk_mod(sortidx));
+    if sortByTrial
+        plotRastergram(spk_mod(sortidx),'type','few');
+    else
+        plotRastergram(spk_mod,'type','few');
+    end
     axis tight;xlim([0,1000./stim.F])
     xlabel('Time from sinusoidal cycle (ms)')
     linkaxes(ax([3,4]),'x')
@@ -276,16 +284,24 @@ metadata = {};
 [ent, info] = load_h5_trace(file.path);
 idx = find(strcmp('RealNeuron',{ent.name}));
 idx = [idx, find(strcmp('AnalogInput',{ent.name}))];
-V = [ent(idx(1)).data];
-t = linspace(0,info.tend,length(V));
-if dendrite
+
+
+if ~isempty(dendrite)
+    idx = idx(dendrite);
+    V = [ent(idx(1)).data];
     Vd = [ent(idx(end)).data];
+else
+    
+    V = [ent(idx(1)).data];
 end
+
+t = linspace(0,info.tend,length(V));
+
 % Do we need AEC?
 wave = find(strcmp('Waveform',{ent.name}));
 W = ent(wave);
 if isempty(ent(idx(1)).metadata)
-    if length(dendrite) == 1
+    if length(dendrite) < 2
     % if there was a holding potential include it on the AEC current
         idx = [wave,find(strcmp('Constant',{ent.name}))];
         I = sum(vertcat(ent(idx).data),1) + holding(1);
@@ -296,14 +312,12 @@ if isempty(ent(idx(1)).metadata)
         metadata = {ent(idx).metadata};
     else
         idx = find(strcmp('AnalogOutput',{ent.name})); % QUICKFIX!
-        I = ent(idx(dendrite(1))).data + holding(1);
-        Id = ent(idx(dendrite(2))).data + holding(2); 
+        idx = idx(dendrite);
+        I = ent(idx(1)).data + holding(1);
+        Id = ent(idx(end)).data + holding(2); 
         metadata = {ent(idx).metadata};
         W = ent(idx(end));
         
-        idx = find(strcmp('AnalogInput',{ent.name}));
-        V = ent(idx(dendrite(1))).data;
-        Vd = ent(idx(dendrite(2))).data;
         Ks = load(kfiles(dendrite(1)).path);
         Kd = load(kfiles(dendrite(2)).path);
         

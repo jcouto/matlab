@@ -13,7 +13,7 @@ if ~exist('folder','var')
     folder = pwd;
 end
 if ~exist('dendrite','var')
-    dendrite = [0,1];
+    dendrite = [];
 end
 if ~exist('holding_current','var')
     holding_current = [0,0];
@@ -137,7 +137,11 @@ for ii = 1:length(F)
     plot(x, r0(idx(ii))+r1(idx(ii))*sin(2*pi*F(idx(ii))*x/1000.0+phi(idx(ii))),'color',cc(1,:), 'LineWidth', 1.2);
     %     axis([0,edges(end),min(r(1:end-1,(idx(ii))))-5,max(r(:,(idx(ii))))+5]);
     axis('tight')
-    set(ax,'ylim',[0,max(r(:))+5])
+    try
+        set(ax,'ylim',[0,nanmax(r(:))+5])
+    catch
+        disp('there was a problem setting the ylim...')
+    end
     text(min(ylim),max(ylim),sprintf('\t\tF = %4dHz; N = %d spikes.',F(idx(ii)),N(idx(ii))),'verticalalignment','top','horizontalalignment','left')
     counter = counter + 1;
     if counter == 13 | ii == length(F)

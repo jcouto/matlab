@@ -1,7 +1,7 @@
 function compute_prc_from_EIF(par,dt,I0,Inoise,C,Func,Vreset,tarp,Pamp,Pwidth)
 F = [];
 R = [];
-figure(2),clf
+figure('visible','on'),clf
 ax(1) = axes('position',[0.1,0.1,0.5,.8]);
 hold on
 for ii = 1:length(I0)

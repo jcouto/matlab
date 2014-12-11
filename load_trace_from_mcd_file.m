@@ -1,4 +1,4 @@
-function [data] = load_trace_from_mcd_file(hfile,ChannelType,channel,startend)
+function [data] = load_trace_from_mcd_file(hfile,ChannelType,channel,startend,loadByIndex)
 %[data] = load_trace_from_mcd_file(hfile,ChannelType,channel,startend)
 % Loads the data from an mcd file.
 if ~exist('ChannelType','var')
@@ -53,10 +53,17 @@ EntityID = ChannelList(channel_to_load);
 [nsresult, analogInfo] = ns_GetAnalogInfo(hfile, EntityID);
 
 istartend = nan(2,1);
-[ns_result, istartend(1)] = ns_GetIndexByTime(hfile, EntityID, startend(1),0);
-[ns_result, istartend(2)] = ns_GetIndexByTime(hfile, EntityID, startend(2),0);
+
+if ~exist('loadByIndex','var')
+    [ns_result, istartend(1)] = ns_GetIndexByTime(hfile, EntityID, startend(1),0);
+    [ns_result, istartend(2)] = ns_GetIndexByTime(hfile, EntityID, startend(2),0);
+else
+    istartend = startend;
+end
 
 [nsresult,cont_count, x] = ns_GetAnalogData(hfile,EntityID,istartend(1),diff(istartend));
+
+data.entityID = EntityID;
 data.data = (x./(analogInfo.Resolution*1e3));
 data.xpos = analogInfo.LocationX;
 data.ypos = analogInfo.LocationY;

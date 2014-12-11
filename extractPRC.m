@@ -33,6 +33,13 @@ switch option
     case 'mean'
         % <isi> is the mean of all isis
         expected_isi = cellfun(@(x)mean(x),isis,'UniformOutput',0);
+	case 'truncated_gaussian'
+        % <isi> is the truncated mean of all isis
+%         unpert_isi = cellfun(@(x,y)x(1:y-1),isis,idx,'UniformOutput',0);
+        unpert_isi = cellfun(@(x,y)x(:),isis,idx,'UniformOutput',0);
+        all_isis = cell2mat(unpert_isi);
+        expected_isi = cellfun(@(x)nanmean(all_isis(all_isis>=abs(x(find(x<=0,1,'last'))))),...
+            spiketimes,'UniformOutput',0);
     otherwise
         error('Specified method/option not defined.')
 end
