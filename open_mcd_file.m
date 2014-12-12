@@ -17,17 +17,13 @@ open_neuroshare()
 % Open file
 [nsresult, hfile] = ns_OpenFile(filename);
 if (nsresult ~= 0)
-    disp('Data file did not open!');
-    hfile = [];
-    return
+    error('Data file did not open!');
 end
 % Return information
 [nsresult, info] = ns_GetFileInfo(hfile);
 % Gives you EntityCount, TimeStampResolution and TimeSpan
 if (nsresult ~= 0)
-    disp('Data file information did not load!');
-    data = [];
-    return
+    error('Data file information did not load!');
 end
 
 %
@@ -65,19 +61,18 @@ function open_neuroshare()
 % Imports the neuroshare lib.
     switch computer()
         case 'PCWIN'
-            [pathname, name, ext]=fileparts(which('nsMCDLibrary.dll'));
+            libname = 'nsMCDLibrary.dll';
          case 'PCWIN64'
-            [pathname, name, ext]=fileparts(which('nsMCDLibrary64.dll'));
+            libname = 'nsMCDLibrary64.dll';
         case 'GLNX86'
-            [pathname, name, ext]=fileparts(which('nsMCDLibraryLinux32.so'));
+            libname = 'nsMCDLibraryLinux32.so';
         case 'GLNXA64'
-            % TODO: Will need appropriate mexprog
-            [pathname, name, ext]=fileparts(which('nsMCDLibraryLinux64.so'));
+            libname = 'nsMCDLibraryx86_64.so';
         case {'MACI', 'MACI64'}
-            [pathname, name, ext]=fileparts(which('nsMCDLibrary.dylib'));
+            libname = 'nsMCDLibrary.dylib';
     end
-    if (ns_SetLibrary([pathname filesep name ext]) ~= 0)
+    libpath = which(libname);
+    if (ns_SetLibrary(libpath) ~= 0)
         error('''%s'' was not found on the MATLAB path',...
-            fullfile(pathname, name, ext));
-        return
+            libname);
     end
