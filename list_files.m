@@ -76,10 +76,9 @@ else
     all_files = unfiltered_files(~cellfun(@isempty,regexp(unfiltered_files,...
         mask_pattern)));
     files = all_files;
-    for mask_pattern = exception_level1
-        files = unfiltered_files(cellfun(@isempty,regexp(files,mask_pattern{1})));
-    end
-    
+    for ii = 1:length(exception_level1)
+        files = files(cellfun(@(x)isempty(regexp(x,exception_level1{ii})), files));
+    end  
 end
 
 
