@@ -82,18 +82,31 @@ end
 % Save parameters to file.
 holding_current = nan;
 
+expName = regexp(pwd,'[0-9]{8}[A-Z][0-9]{2}','match');
+if isempty(expName)
+    expName = {'unknown'};
+end
+expName = expName{end};
+tmp = regexp(folder,expName,'split');
+tmp = tmp{end};
+tmp(tmp =='/') = '_';
 
-expName = regexp(pwd,'\d{8}[A-Z]\d{2}','match');
 Vm_offset = o;
 tau.tau = taus;
 tau.confidance = ci;
 tau.Vm_offset = o;
-tau.expName = expName{1};
+tau.expName = expName;
 tau.holding_current = holding_current;
-save('tau.mat','-struct','tau')
+
+
+appendix = sprintf('%s%s',expName,tmp);
+DATANAME = 'tau.mat';
+
+dataName = sprintf('%s/%s_%s',folder,appendix,DATANAME);
+save(dataName,'-struct','tau')
 
 % Plotting (run setFigureDefault before this.)
-fig = figure(1);
+fig = figure(1);clf
 
 % Plot the fit
 ax = axes();
@@ -103,7 +116,7 @@ V = Vm(idx0:idx1);
 hold on
 plot(t(idx0:idx1)*1e3, Vc(:,idx0:idx1), 'Color', [.6,.6,.6]);
 plot(t(idx0:idx1)*1e3, Vm(idx0:idx1), 'Color', [.3,.3,.3], 'LineWidth', 4);
-fig_text = sprintf('%s\n\\tau_0 = %.2f ms',expName{1}, taus(1)*1e3);
+fig_text = sprintf('%s\n\\tau_0 = %.2f ms',expName, taus(1)*1e3);
 if length(taus) == 1
     plot((T+t0)*1e3, singleExp.F(T)+min(V), 'r', 'LineWidth', 2);
 else
@@ -151,13 +164,13 @@ set(ax(3),'position',[0.65,0.1,0.25,0.6],'box','off','yaxislocation','right')
 % Print figure and caption
 set(gcf, 'Color', [1,1,1], 'PaperUnits', 'Inch', 'PaperPosition', [0,0,7,4],'PaperSize', [7,4]);
 
-figName = sprintf('tau_%s.pdf',expName{1});
+figName = sprintf('tau_%s.pdf',expName);
 caption = sprintf(['Experiment %s - Short pulse protocol to compute the ',...
     'membrane time constant. Intensity of the pulse was %3.0f pA and the holding',...
     ' current %4.1f pA. Top - Average $V_m$ computed from %d traces.',...
     ' Bottom right - Stability, $V_m$ fluctuation across trials.',...
     ' Bottom left - Result of the fit. The offset was subtracted.'],...
-    expName{1}, min(I(:))-max(I(:)), holding_current, length(o));
+    expName, min(I(:))-max(I(:)), holding_current, length(o));
 if length(taus)==1
     caption = sprintf(['%s Used a single exponential to fit the data ',...
         'the time constant is %3.3fms.'],caption,taus(1)*1.e3);
