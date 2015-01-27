@@ -1,4 +1,4 @@
-function [vi,fi,vm] = process_steps_folder(folder)
+function [vi,fi,vm, t, V, I] = process_steps_folder(folder,VI_limit_pA,threshold)
 %[vi,fi,vm] = process_steps_folder(folder)
 % This function creates an fi and vi curves from a folder.
 % "folder" input (default is the current working directory) is the folder name
@@ -7,7 +7,8 @@ function [vi,fi,vm] = process_steps_folder(folder)
 
 if ~exist('plotvar','var');plotvar = 1;end
 if ~exist('folder','var');folder = pwd;end
-
+if ~exist('VI_limit_pA','var'); VI_limit_pA = []; end
+if ~exist('threshold','var');threshold = []; end
 folder = cd(cd(folder));
 
 %% Load all traces in folder
@@ -29,9 +30,10 @@ I = repmat(I,N,1);
 for ii = 2:length(files)
     [t,V(ii,:),I(ii,:),metadata{ii},info] = i_load_compensated_voltage(files(ii),kfiles);
 end
+if isempty(VI_limit_pA),VI_limit_pA = max(I(:));end
 
 %% Extract spikes
-[spks,spkw,tspkw] = extract_spikes(V,[],t);
+[spks,spkw,tspkw] = extract_spikes(V,threshold,t);
 isis = cellfun(@(x)diff(x),spks,'uniformoutput',0);
 
 %% Find start and duration of stim
@@ -63,7 +65,7 @@ fi.n = nan(N,1);
 fi.adapt = nan(N,1);
 fi.dur = dur;
 fi.fpost = nan(N,1);
-fi.npost = nan(N,1);
+fi.npost = nan(N,1);vi
 
 spikes.shape = spkw;
 spikes.time = tspkw;
@@ -73,14 +75,16 @@ vm.trials = false(N,1);
 vm.v = nan(N,1);
 vm.v_sd = nan(N,1);
 vm.dur = tstim;
-% Fraction of the stimulation to be used in the calculations of steady
+% Fraction of the stimulation to~isnan(vi.v) be used in the calculations of steady
 % state
 FRACTION = 3;
 
 for ii = 1:N
     spk = spks{ii};
     isi = isis{ii};
+    
     if isempty(spk(spk < tstim))
+        
         vm.trials(ii) = 1;
         vm.v(ii) = mean(V(ii,t < tstim));
         vm.v_sd(ii) = std(V(ii,t < tstim));
@@ -112,23 +116,32 @@ for ii = 1:N
         end
     end
 end
+
 %% Fit fi and vi curves
 fi.expr = 'a*x+b';
 vi.expr = 'a*x+b';
 
 [fi.coeff] = polyfit(fi.i(~isnan(fi.f)),fi.n(~isnan(fi.f))./fi.dur,1);
 %[fi.coeff] = polyfit(fi.i(~isnan(fi.f)),fi.n(~isnan(fi.f))./fi.dur,1);
-[vi.coeff] = polyfit(vi.i(~isnan(vi.v)),(vi.v(~isnan(vi.v))-vm.v(~isnan(vi.v))),1);
+ % Them it will only use values until VI_limit_pA
+viIdx = ~isnan(vi.v) & vi.i <= VI_limit_pA;
+[vi.coeff] = polyfit(vi.i(viIdx),(vi.v(viIdx)-vm.v(viIdx)),1);
 
 vi.Rin = vi.coeff(1)*1e3;
 
 %% Save data
 expName = regexp(pwd,'[0-9]{8}[A-Z][0-9]{2}','match');
 if isempty(expName)
-    expName = {'unknown'};
+    try
+        % Try to get the name from two folders above.
+        [foldername,expName] = fileparts(fileparts(fileparts(pwd)));
+    catch
+        expName = {'unknown'};
+    end
 end
-expName = expName{end};
-
+if iscell(expName)
+   expName = expName{end};
+end
 %tmp = strsplit(folder,expName);
 tmp = regexp(folder,expName,'split');
 
@@ -144,7 +157,7 @@ save(dataName,'fi','vi','vm','spikes','files','kfiles','expName','folder')
 %% Plots for fi, vi and vm
 if exist('plotvar','var')
     cc = setFigureDefaults;
-    fig = figure('visible','on');
+    fig = figure(1);clf;
     % Build frame
     ax(1) = axes('position',[0.1,0.75,.2,.2]);
     ylabel('Adaptation index') % adapt
@@ -176,7 +189,7 @@ if exist('plotvar','var')
         'fontsize',10,'fontweight','bold')
     
     % Plot results
-    if sum(fi.trials)
+    if sum(fi.trials)>1
         axes(ax(1))
         plot(fi.i,fi.adapt,'ko','markerfacecolor',cc(1,:),...
             'markersize',2.5)
@@ -189,11 +202,11 @@ if exist('plotvar','var')
             'markersize',2.5)
         plot(fi.i,fi.n./fi.dur,'k+')
     end
-    if sum(vi.trials)
+    if sum(vi.trials)>1
         axes(ax(3))
-        edges = [nanmin(vi.i),nanmax(vi.i)];
+        edges = [nanmin(vi.i(viIdx)),nanmax(vi.i(viIdx))];
         plot(edges,polyval(vi.coeff,edges),'k','linewidth',1)
-        errorbar(vi.i,vi.v-vm.v,vi.v_sd,'ko',...
+        errorbar(vi.i(viIdx),vi.v(viIdx)-vm.v(viIdx),vi.v_sd(viIdx),'ko',...
             'markerfacecolor',cc(1,:),'markersize',2.5)
         % Plot examples
         axes(ax(4)) % Pick 2 traces at random from fi and vi
@@ -218,7 +231,12 @@ if exist('plotvar','var')
         axis tight
         axes(ax(6)) % Plot the dv/V
         dspkw = diff(spkw{idx}, 1, 2)./(info.dt*1e3);
-        idx2 = randsample(size(spkw{idx},1),10);
+        try
+            idx2 = randsample(size(spkw{idx},1),10);
+        catch
+            idx2 = size(spkw{idx},1);
+            disp(['There are less than 10 spikes in trace: ',num2str(idx)])
+        end
         plot(spkw{idx}(idx2,1:end-1)',dspkw(idx2,:)','color','k')
         plot(nanmean(spkw{idx}(:,1:end-1)),nanmean(dspkw(:,:)),'color','r')
         axis tight
@@ -226,8 +244,9 @@ if exist('plotvar','var')
         plot([0,0],ylim,'k--')
     end
     %% Prepare caption
+    
     caption = sprintf(['Experiment %s. Performed %s. Computation of the cell FI',...
-        ' and VI curves.'],expName,datestr(files(1).date));
+        ' and VI curves.'],strrep(expName,'_', ' '),datestr(files(1).date));
     if sum(fi.trials)
         caption = sprintf(['%s A - Adaptation index (last isi divided by the ',...
             'first) versus the injected current (pA) - mean $%1.2f\\pm%1.2f$.'],caption,...
@@ -262,6 +281,7 @@ if exist('plotvar','var')
     end
     FIGNAME = 'fi_vi.pdf';
     figName = sprintf('%s/%s_%s',folder,appendix,FIGNAME);
+    
     set(fig,'paperposition',[0,0,18,10],'papersize',[18,10])
     print(fig,'-dpdf',figName)
     printFigWithCaption(figName,caption)

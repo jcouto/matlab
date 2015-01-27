@@ -1,7 +1,7 @@
 function [spk,spk_w,t_spk_w,spk_idx] = extract_spikes(data, threshold, t, tpre, tpost, tdead, method)
 % EXTRACT_SPIKES Extracts the spikes from voltage data.
 %
-% [spk,spkwave,tspkwave] = extract_spikes( DATA, THRESHOLD, T, TPRE, TPOST, TDEAD)
+% [spk,spk_w,t_spk_w,spk_idx] = extract_spikes(data, threshold, t, tpre, tpost, tdead, method)
 % Channels should be in collums.
 %
 %  Units:

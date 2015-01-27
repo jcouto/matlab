@@ -1,9 +1,10 @@
-function [var] = process_eif_folder(foldername,C,FORCE_FROM_SCRATCH,plotvar)
+function [var] = process_eif_folder(foldername,C,FORCE_FROM_SCRATCH,threshold,plotvar)
 % Processes [var] = process_eif_folder(foldername,C,FORCE_FROM_SCRATCH,plotvar)
 
 if ~exist('C','var');C = []; end
 if ~exist('FORCE_FROM_SCRATCH','var');FORCE_FROM_SCRATCH = 0; end
 if ~exist('plotvar','var');plotvar = 1; end
+if ~exist('threshold','var');threshold = []; end
 
 if ~exist('foldername','var')
     foldername = cd(cd('./'));
@@ -14,11 +15,31 @@ for ii = 1:length(files)
     [folder,fname] = fileparts(files(ii).path);
     tmp = list_files(folder,sprintf('%s*eif.mat',fname));
     if isempty(tmp) | FORCE_FROM_SCRATCH
-        tmp = process_eif_file(files(ii).path,[],C);
+        tmp = process_eif_file(files(ii).path,[],C,threshold,plotvar);
     else
         fprintf(1,'Skipping file %s\n',files(ii).path)
     end
 end
+%% Get experiment name
+expName = regexp(pwd,'[0-9]{8}[A-Z][0-9]{2}','match');
+if isempty(expName)
+    try
+        % Try to get the name from two folders above.
+        [~,expName] = fileparts(fileparts(fileparts(pwd)));
+    catch
+        expName = {'unknown'};
+    end
+end
+if iscell(expName)
+   expName = expName{end};
+end
+%tmp = strsplit(folder,expName);
+tmp = regexp(folder,expName,'split');
+
+tmp = tmp{end};
+tmp(tmp =='/') = '_';
+appendix = sprintf('%s%s',expName,tmp);
+
 
 %% Merge all files
 files = list_files(foldername,'*_eif.mat','all',{'trash'});
@@ -47,7 +68,7 @@ if ~isempty(files)
     
     if plotvar
         
-        figure('visible','on');clf
+        fig = figure('visible','on');clf
         ax(1) = subplot(2,5,1); % Capacitance
         edges = [0:10:500];
         [count] = histc(var.C,edges);
@@ -127,14 +148,16 @@ if ~isempty(files)
         end
         var.ref_x = ref_x;
         var.ref_f = cellfun(@(x)func2str(x),ref_f,'uniformoutput',0);
+        appendix = 'refractory_param_summary.pdf'
+        figName = sprintf('%s/%s.pdf',foldername,appendix);
+        print(gcf,'-dpdf',figName)
+        
     end
+    
 else
     var = [];
 end
 %%
-expName = regexp(pwd,'[0-9]{8}[A-Z][0-9]{2}','match');
-if isempty(expName)
-    expName = {'unknown'};
-end
-save(sprintf('%s_reif_param.mat',expName{end}),'-struct','var');
-keyboard
+
+save(sprintf('%s_reif_param.mat',expName),'-struct','var');
+

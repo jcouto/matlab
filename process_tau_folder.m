@@ -84,9 +84,17 @@ holding_current = nan;
 
 expName = regexp(pwd,'[0-9]{8}[A-Z][0-9]{2}','match');
 if isempty(expName)
-    expName = {'unknown'};
+    try
+        % Try to get the name from two folders above.
+        [foldername,expName] = fileparts(fileparts(fileparts(pwd)));
+    catch
+        expName = {'unknown'};
+    end
 end
-expName = expName{end};
+if iscell(expName)
+   expName = expName{end};
+end
+%tmp = strsplit(folder,expName);
 tmp = regexp(folder,expName,'split');
 tmp = tmp{end};
 tmp(tmp =='/') = '_';

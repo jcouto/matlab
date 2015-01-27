@@ -1,4 +1,4 @@
-function [outvar] = process_eif_file(fname,tt,C,plotvar)
+function [outvar] = process_eif_file(fname,tt,C,threshold,plotvar)
 %[outvar] = process_eif_file(fname,tt,plotvar)
 %     fname - name of the file to be analysed
 %     tt - [tmin,tmax] interval used to compute the dIV - default: all noisy
@@ -12,6 +12,7 @@ MIN_dI_VOLT = -100;
 DATANAME = 'eif.mat';
 
 
+if ~exist('threshold','var');threshold = [];end
 if ~exist('plotvar','var');plotvar = 1;end
 
 %% Find the file and compensate if needed.
@@ -203,7 +204,7 @@ if ~isempty(plotvar)
         eif.param(2),eif.param(3),eif.param(4));
     
     %%
-    [spk,spkw,tspkw, ~] = extract_spikes( V, [], t, 2, 5, 3);
+    [spk,spkw,tspkw, ~] = extract_spikes( V, threshold, t, 2, 5, 3);
     axes(ax{2}(1)),hold on
     edge = (min(V)-1:.5:max(V)+1);
     [n] = histc(V,edge);
