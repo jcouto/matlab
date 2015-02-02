@@ -27,3 +27,5 @@ switch type
         disp('unknown filter type')
 end
 xf=filtfilt(b,a,x);
+
+        
