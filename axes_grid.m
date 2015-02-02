@@ -61,7 +61,7 @@ if length(percent)<length(dim),percent = percent + 0.*dim;end
 % Initialize variables and create axes.
 h = height./dim(1);
 w = width./dim(2);
-o = offset;
+o = fliplr(offset);
 o(1) = o(1) + height;
 
 ax = nan(dim);
