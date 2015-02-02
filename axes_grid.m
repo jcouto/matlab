@@ -13,7 +13,7 @@ function ax = axes_grid(dim,width,height,offset,percent,varargin)
 %   - AXES_PROPERTIES: Additional properties passed to the axes uppon
 %   creation
 %
-% Example:
+% Example 1:
 %   ax = axes_grid([10,5],.8,0.5,[],[],'box','on');
 %   axes(ax(1,2))   % select axes (1,2)
 %   plot(1:40)      % Plot to that axes
@@ -21,6 +21,20 @@ function ax = axes_grid(dim,width,height,offset,percent,varargin)
 % Creates a grid of 10 rows by 5 columns using 0.8 of the figure height and
 % 0.5 of the width. Passes the box:on option to the axes.
 %
+% Example 2:
+%   fig = figure(1);clf
+%   ax = axes_grid([10,10],0.9,0.9,[0.05,0.05],1);
+%   for i=1:10
+%       for j = 1:10
+%           axes(ax(i,j))
+%           plot(rand(1,10))
+%           axis tight
+%       end
+%   end
+%   set(ax,'color','none','box','on','xtick',[],'ytick',[])
+%   set(ax(1:end,1),'ytick',[0:0.5:1])
+%   set(ax(end,1:end),'xtick',[1:2:10])
+%   linkaxes(ax)
 %
 % Joao Couto (jpcouto@gmail.com) January 2015
 
