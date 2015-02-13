@@ -5,7 +5,7 @@ function out=plotRastergram(varargin)
     
     p.addRequired('spikes') %spike times in secconds
     p.addOptional('counter',0,@isnumeric) %spike times in secconds
-    p.addOptional('linewidth',1,@isnumeric) %spike times in secconds
+    p.addOptional('linewidth',2,@isnumeric) %spike times in secconds
 
     p.addOptional('marker','o')
     p.addOptional('color',[0,0,0])

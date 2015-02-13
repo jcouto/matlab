@@ -19,8 +19,8 @@ void mexFunction(int nlhs, mxArray *plhs[],
     double* sp2;
     double *geo_mean_rates;
     double *ccg;
-    double u1, u2 = 0;
-    int shift, N, M, maxdelay;
+    double u1, u2;
+    int shift, N, M, maxdelay,i,t,w;
 
     // Pointer to input arguments
     sp1 = mxGetPr(SP1);
@@ -32,16 +32,21 @@ void mexFunction(int nlhs, mxArray *plhs[],
     if (N != mxGetN(SP2))
         mexErrMsgTxt("Binary spiketrains must have the same length.");
 
-    maxdelay = N/2;
+    maxdelay = floor(N/2.0);
     if (nrhs > 2)
         maxdelay = mxGetScalar(prhs[2]);
 
     //Compute mean firing rates
-    for (int i = 0; i<M; i++)
-        for (int t = 0; t<N; t++) {
-            u1 += sp1[i,t];
-            u2 += sp2[i,t];
+    u1 = 0.0;
+    u2 = 0.0;
+    for (i = 0; i<M; i++)
+        for (t = 0; t<N; t++) {
+            u1 += sp1[t+i*N];
+            u2 += sp2[t+i*N];
         }
+    #ifdef DEBUG
+        printf("Total number of spikes is: %lf and %lf\n",u1,u2);
+    #endif
     u1 /= N*M;
     u2 /= N*M;
     #ifdef DEBUG
@@ -51,19 +56,17 @@ void mexFunction(int nlhs, mxArray *plhs[],
     // Compute the correlation
     plhs[0] = mxCreateDoubleMatrix(1, maxdelay*2+1, mxREAL);
     ccg = mxGetPr(plhs[0]);
-    for (int w = -maxdelay; w <= maxdelay; w++) {
+    for (w = -maxdelay; w <= maxdelay; w++) {
         ccg[w + maxdelay] = 0;
-        //ccg[w + maxdelay + maxdelay*2+1] = 0;
-        for (int i = 0; i<M; i++) {
-            for (int t = 0; t<N; t++) {
+        for (i = 0; i<M; i++) {
+            for (t = 0; t<N; t++) {
                 shift = t + w;
                 if (shift >= 0 && shift <= N)  
-                    ccg[w + maxdelay] += sp1[i,t] * sp2[i,shift];   
-                    //ccg[w + maxdelay + maxdelay*2+1] += sp1[i,t] * sp2[i%M,shift];
+                    // There is a bug with the shift!!!
+                    ccg[w + maxdelay] += sp1[t + i*N] * sp2[shift + i*N];          
             }
         }
         ccg[w + maxdelay] /= M*(N - abs(w))*sqrt(u1*u2);
-        //ccg[w + maxdelay + maxdelay*2+1] /= M*(N - abs(w))*sqrt(u1*u2);
     }
     mxSetPr(plhs[0],ccg);
     //Output rates

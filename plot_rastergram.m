@@ -51,7 +51,7 @@ switch type
         try
         imagesc([0,size(sp,2)-1],offset+[0,size(sp,1)-1].*increment,im)
         catch
-            keyboard
+            warning('A raster failed...')
         end
     case 'blackimg'
         if iscell(sp)
