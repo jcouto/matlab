@@ -1,5 +1,6 @@
-function [f,mm,vv,edges] = fano_factor(spikes,window)
-% Computes fano factor from binary spike trains (N X time array)
+function [f,mm,vv,edges,counts] = fano_factor(spikes,window)
+% FANO_FACTOR Computes fano factor from binary spike trains (N X time array)
+% [f,mm,vv,edges] = fano_factor(spikes,window)
 %   - spikes: Array of binary spikes (N x time (1ms bins))
 %   - window: to compute mean and variance 
 %
