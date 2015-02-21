@@ -29,8 +29,11 @@ if length(tmp)==1
     end
 end
 oldPWD = pwd;
-cd(foldername)
-
+if ~isempty(foldername)
+    cd(foldername)
+else
+    foldername = pwd;
+end
 tmpFname    = 'tempTEX';
 % create tmp Latex file.
 fid         = fopen([tmpFname,'.tex'],'w');
