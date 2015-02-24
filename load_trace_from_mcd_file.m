@@ -1,6 +1,11 @@
 function [data] = load_trace_from_mcd_file(hfile,ChannelType,channel,startend,loadByIndex)
-%[data] = load_trace_from_mcd_file(hfile,ChannelType,channel,startend)
+% LOAD_TRACE_FROM_MCD_FILE Loads part or the entire trace from an MultichannelSystems (mcd) file.
+%
+%[data] = LOAD_TRACE_FROM_MCD_FILE(hfile,ChannelType,channel,startend,loadByIndex)
 % Loads the data from an mcd file.
+% Use open_mcd_file to generate hfile.
+%
+
 if ~exist('ChannelType','var')
     ChannelType = 'elec';
     %ChannelType = 'digi';

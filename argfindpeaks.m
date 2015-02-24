@@ -1,5 +1,7 @@
 function idx = argfindpeaks(X, threshold, window)
-% idx = findPeakIndexes(X, THRESHOLD, WINDOW)
+% ARGFINDPEAKS Extract indexes of peaks in data using threshold crossing.
+%
+% idx = ARGFINDPEAKS(X, THRESHOLD, WINDOW)
 % FINDPEAKINDEXES Extracts the indexes of the peaks in the data with
 % threshold crossing.
 %       - discards peaks that occur in the first and last window/2 points.
@@ -8,6 +10,8 @@ function idx = argfindpeaks(X, threshold, window)
 %       indexes (NOT IMPLEMENTED)
 %       - Internal variable PLOT can be used for verbose plot (edit
 %       findPeakIndexes).
+%   Joao Couto 2012
+%
 
 if ~exist('X','var') || isempty(X)
     error('findPeakIndexes: Data must be a vector;')

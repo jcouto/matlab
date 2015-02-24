@@ -1,7 +1,10 @@
 function [hfile,outinfo] = open_mcd_file(filename)
-% [hfile,outinfo] = open_mcd_file(filename)
+% OPEN_MCD_FILE Opens an mcd file using the neuroshare library.
+%
+% [hfile,info] = OPEN_MCD_FILE(filename)
 % Opens a multichannel systems file. Use load_trace_from_mcd_file(file,channel,startend)
 % to load a channel.
+%
 if ~ischar(filename)
    errormsg = sprintf('Argument "filename" needs to be a string.');
 	hfile = [];

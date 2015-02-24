@@ -1,5 +1,13 @@
 function xf = filter_data(x,fmin,fmax,srate,type)
-% xf = filter_data(x,fmin,fmax,srate,type)
+% FILTER_DATA Wrapper to some basic filters using filtfilt.
+%
+% xf = FILTER_DATA(x,fmin,fmax,srate,type)
+%   Filter types are:
+%       ellip      elliptic filter with parameters 2, 0.1, 40
+%       butter     4 pole butterworth filter 
+%
+% Joao Couto 2013
+
 if ~exist('fmin','var');fmin = 300;end
 if ~exist('fmax','var');fmax = 3000;end
 if ~exist('srate','var');srate = 20000;end
