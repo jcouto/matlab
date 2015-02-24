@@ -1,5 +1,8 @@
 function [vi,fi,vm, t, V, I] = process_steps_folder(folder,VI_limit_pA,threshold)
-%[vi,fi,vm] = process_steps_folder(folder)
+% PROCESS_STEPS_FOLDER extracts FI and VI curves from simple steps
+% protocols.
+% [vi,fi,vm, t, V, I] = PROCESS_STEPS_FOLDER(folder,VI_limit_pA,threshold)
+%
 % This function creates an fi and vi curves from a folder.
 % "folder" input (default is the current working directory) is the folder name
 % All files must have the same length.
@@ -301,6 +304,8 @@ if isempty(idx)
     idx = find(strcmp('ConductanceBasedNeuron',{ent.name}));
 end
 V = [ent(idx(1)).data];
+
+Vmetadata = ent(idx(1)).metadata;
 t = linspace(0,info.tend,length(V));
 % Do we need AEC?
 idx = find(strcmp('Waveform',{ent.name}));
@@ -308,7 +313,7 @@ metadata = ent(idx).metadata;
 % if there was a holding potential include it on the AEC current
 idx = [idx,find(strcmp('Constant',{ent.name}))];
 I = sum(vertcat(ent(idx).data),1);
-if ~isempty(kfiles)
+if ~isempty(kfiles) & isempty(Vmetadata)
     % Is there AEC?
     [~,k]  = min((file.date) - [kfiles.date]);
     Ke=load(kfiles(k).path);
