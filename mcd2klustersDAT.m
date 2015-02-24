@@ -1,9 +1,17 @@
-function [info] = mcd2klustersDAT(filename,chunk_size,verbose)
-%[info] = mcd2klustersDAT(filename,chunk_size,verbose)
-% Converts all analog ('elec') channels from an mcd file to klusters dat format.
+function [info] = mcd2klustersDAT(filename,channels,chunk_size,verbose)
+% MCD2KLUSTERSDAT Converts Multichannel systems MCD files to the format
+% used by the Klusters Suite.
+%
+%   [info] = MCD2KLUSTERSDAT(filename,channels,chunk_size,verbose)
+% Converts all (or a selected group of) analog ('elec') channels from an mcd file to klusters dat format.
 % Inputs are the filename (Mandatory), and chunk size (1e6) and verbose (true/false)
+% Output filename is the same as the MCD but without extension.
+%
 if ~exist('filename','var')
     error('Filename not specified.')
+end
+if ~exist('channels','var')
+    channels = [];
 end
 if ~exist('chunk_size','var')
    chunk_size = 1e6; %floor(N/50);
@@ -28,6 +36,9 @@ analogList = find([entityInfo.EntityType] == 2);
 tmp = cellfun(@(x)x(1:4),{entityInfo(analogList).EntityLabel},'uniformoutput',0);
 
 channelList = analogList(strcmp(tmp,channelType));
+if ~isempty(channels)
+    channelList = channels;
+end
 channelNumber = cellfun(@(x)str2double(x(14:18)),{entityInfo(channelList).EntityLabel})';
 % Create chunks list
 N  = ceil(nsInfo.TimeSpan./nsInfo.TimeStampResolution);

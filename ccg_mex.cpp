@@ -1,5 +1,6 @@
 /*
  *This is a mex file to compute cross correlations as in Kohn et al. 2005
+ * HAS A BUG WHEN USED FOR MULTIPLE TRIALS AND IS NOT FASTER THAN MATLAB CORR!!!!
  */
 #include "mex.h"
 #include "matrix.h"
