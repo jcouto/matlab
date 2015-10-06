@@ -8,8 +8,9 @@ tmps = s.bytes;
 
 nsamples = file.bytes/(tmps*nchannels)
  %for i = 1:nchannels
-    dataformat =  {'int16',[nchannels,nsamples],sprintf('lfp%03d',0)};
+    dataformat =  {'int16',[nchannels,nsamples],sprintf('data')};
 %end
 
 file = memmapfile(filename,...
     'Format',dataformat)
+out = file;

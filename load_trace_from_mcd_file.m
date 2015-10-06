@@ -67,9 +67,8 @@ else
 end
 
 [nsresult,cont_count, x] = ns_GetAnalogData(hfile,EntityID,istartend(1),diff(istartend));
-
 data.entityID = EntityID;
-data.data = (x./(analogInfo.Resolution*1e3));
+data.data = x;%(x./(analogInfo.Resolution*1e3));
 data.xpos = analogInfo.LocationX;
 data.ypos = analogInfo.LocationY;
 data.zpos = analogInfo.LocationZ;

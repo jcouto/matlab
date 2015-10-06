@@ -8,7 +8,7 @@ function [spk,spk_w,t_spk_w,spk_idx] = extract_spikes(data, threshold, t, tpre, 
 %
 % * DATA               - mV                            []
 % * THRESHOLD          - mV                            [-10 mV]
-% * TIME VECTOR|DT  - s | s                       [1./30e3 s]
+% * TIME VECTOR|DT     - s | s                       [1./30e3 s]
 % * TPRE               - ms (time window before spk)   [5ms]
 % * TPOST              - ms (time window before spk)   [5ms]
 % * TDEAD              - ms (min time between spk)     [2ms]
