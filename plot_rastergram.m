@@ -32,6 +32,7 @@ switch type
         cidx = find(strcmp(varargin,'color'));
         if ~isempty(cidx)
             cc = 1 - varargin{cidx+1};
+            varargin(cidx+[0,1]) = [];
         else
             cc = [1,1,1];
         end
@@ -64,6 +65,7 @@ switch type
         cidx = find(strcmp(varargin,'color'));
         if ~isempty(cidx)
             cc = 1 - varargin{cidx+1};
+            varargin(cidx+[0,1]) = [];
         else
             cc = [0,0,0];
         end
@@ -84,6 +86,7 @@ switch type
             cidx = find(strcmp(varargin,'color'));
             if ~isempty(cidx)
                 cc = varargin{cidx+1};
+                varargin(cidx+[0,1]) = [];
             else
                 cc = [0,0,0];
             end
